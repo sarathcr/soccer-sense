@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Football AI match Forecaster & Training Dashboard</title>
+    <title>Soccer Sense Match Forecaster</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -659,7 +659,7 @@
     <div class="container">
         <header>
             <span class="badge">Live ML Retraining Pipeline</span>
-            <h1>Football AI prediction System</h1>
+            <h1>Soccer Sense</h1>
             <p>Fetch real-time match fixtures and squad stats from the web to train and predict match outcomes.</p>
         </header>
 
@@ -741,7 +741,15 @@
                         <h4 style="font-weight: 700; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
                             <span>⚠️</span> Data Validation Warnings
                         </h4>
-                        <ul id="warningsList" style="padding-left: 1.25rem; font-size: 0.85rem; line-height: 1.45; text-align: left; margin: 0;"></ul>
+                        <ul id="warningsList" style="padding-left: 1.25rem; font-size: 0.85rem; line-height: 1.45; text-align: left; margin: 0; margin-bottom: 1rem;"></ul>
+                        
+                        <!-- Visual Column validation status grid -->
+                        <div id="validationGridSection" style="margin-top: 1rem; border-top: 1px solid rgba(245, 158, 11, 0.25); padding-top: 0.75rem; display: none;">
+                            <h5 style="font-weight: 600; margin-bottom: 0.5rem; font-size: 0.85rem;">Player Level Intelligence - Schema Validation Grid:</h5>
+                            <div id="validationGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 0.5rem; font-size: 0.75rem;">
+                                <!-- Grid items will be added dynamically by JS -->
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Downloads Container -->
@@ -762,10 +770,10 @@
                                 <span>🤖</span> Download Dev Model (75/25 Split)
                             </a>
                             <a href="/download/production_model" class="btn btn-secondary" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); text-decoration: none;" download>
-                                <span>🏆</span> Download Production Model (100% Fit)
+                                <span>🏆</span> Download Soccer Sense Model (100% Fit)
                             </a>
                             <a href="/download/production_model_versioned" class="btn btn-secondary" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); text-decoration: none;" download>
-                                <span>📦</span> Download Versioned Prod Model (.pkl)
+                                <span>📦</span> Download Versioned Soccer Sense Model (.pkl)
                             </a>
                         </div>
                     </div>
@@ -1348,16 +1356,50 @@
                 metricGoalsMae.textContent = (avgMae !== null && !isNaN(avgMae)) ? avgMae.toFixed(2) : "--";
                 metricsPanel.style.display = "grid";
 
-                // Handle Warnings
+                // Handle Warnings & Validation Grid
                 const warningBox = document.getElementById("warningBox");
                 const warningsList = document.getElementById("warningsList");
+                const validationGrid = document.getElementById("validationGrid");
+                const validationGridSection = document.getElementById("validationGridSection");
+                
                 warningsList.innerHTML = "";
+                validationGrid.innerHTML = "";
+                let hasWarnings = false;
+                
                 if (data.warnings && data.warnings.length > 0) {
                     data.warnings.forEach(w => {
                         const li = document.createElement("li");
                         li.textContent = w;
                         warningsList.appendChild(li);
                     });
+                    hasWarnings = true;
+                }
+                
+                if (data.player_validation_status) {
+                    validationGridSection.style.display = "block";
+                    Object.entries(data.player_validation_status).forEach(([col, present]) => {
+                        const item = document.createElement("div");
+                        item.style.display = "flex";
+                        item.style.alignItems = "center";
+                        item.style.gap = "0.25rem";
+                        item.style.padding = "0.25rem 0.5rem";
+                        item.style.borderRadius = "0.375rem";
+                        item.style.background = present ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 44, 44, 0.1)";
+                        item.style.border = present ? "1px solid rgba(16, 185, 129, 0.2)" : "1px solid rgba(239, 44, 44, 0.2)";
+                        item.style.color = present ? "#34d399" : "#f87171";
+                        
+                        item.innerHTML = `
+                            <span>${present ? "🟢" : "⚠️"}</span>
+                            <span style="font-weight: 500;">${col}</span>
+                        `;
+                        validationGrid.appendChild(item);
+                    });
+                    hasWarnings = true; // Show warning box to display grid
+                } else {
+                    validationGridSection.style.display = "none";
+                }
+                
+                if (hasWarnings) {
                     warningBox.style.display = "block";
                 } else {
                     warningBox.style.display = "none";
@@ -1428,16 +1470,50 @@
                 metricGoalsMae.textContent = (avgMae !== null && !isNaN(avgMae)) ? avgMae.toFixed(2) : "--";
                 metricsPanel.style.display = "grid";
 
-                // Handle Warnings
+                // Handle Warnings & Validation Grid
                 const warningBox = document.getElementById("warningBox");
                 const warningsList = document.getElementById("warningsList");
+                const validationGrid = document.getElementById("validationGrid");
+                const validationGridSection = document.getElementById("validationGridSection");
+                
                 warningsList.innerHTML = "";
+                validationGrid.innerHTML = "";
+                let hasWarnings = false;
+                
                 if (data.warnings && data.warnings.length > 0) {
                     data.warnings.forEach(w => {
                         const li = document.createElement("li");
                         li.textContent = w;
                         warningsList.appendChild(li);
                     });
+                    hasWarnings = true;
+                }
+                
+                if (data.player_validation_status) {
+                    validationGridSection.style.display = "block";
+                    Object.entries(data.player_validation_status).forEach(([col, present]) => {
+                        const item = document.createElement("div");
+                        item.style.display = "flex";
+                        item.style.alignItems = "center";
+                        item.style.gap = "0.25rem";
+                        item.style.padding = "0.25rem 0.5rem";
+                        item.style.borderRadius = "0.375rem";
+                        item.style.background = present ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 44, 44, 0.1)";
+                        item.style.border = present ? "1px solid rgba(16, 185, 129, 0.2)" : "1px solid rgba(239, 44, 44, 0.2)";
+                        item.style.color = present ? "#34d399" : "#f87171";
+                        
+                        item.innerHTML = `
+                            <span>${present ? "🟢" : "⚠️"}</span>
+                            <span style="font-weight: 500;">${col}</span>
+                        `;
+                        validationGrid.appendChild(item);
+                    });
+                    hasWarnings = true; // Show warning box to display grid
+                } else {
+                    validationGridSection.style.display = "none";
+                }
+                
+                if (hasWarnings) {
                     warningBox.style.display = "block";
                 } else {
                     warningBox.style.display = "none";
@@ -1652,8 +1728,23 @@
                     homePlayers.forEach(p => {
                         const li = document.createElement("li");
                         li.className = "player-prediction-item";
+                        li.style.padding = "0.75rem 0.5rem";
+                        li.style.borderBottom = "1px solid rgba(255, 255, 255, 0.05)";
                         const bestPred = p.predictions[0] || { goal_count: 1, probability: 0 };
-                        li.innerHTML = `<span class="player-name">${p.name}</span> <span class="player-prob">${bestPred.probability}% to score ${bestPred.goal_count}+</span>`;
+                        
+                        let statsHtml = "";
+                        if (p.mins !== undefined && p.mins !== null) {
+                            statsHtml = `<span style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-top: 0.15rem;">Mins: ${p.mins} | xG/90: ${p.xg_x90} | Goals/90: ${p.goals_x90} | Conv: ${p.conv_pct}%</span>`;
+                        }
+                        li.innerHTML = `
+                            <div style="display: flex; flex-direction: column; width: 100%;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                    <span class="player-name" style="font-weight: 600; color: var(--text-primary);">${p.name}</span> 
+                                    <span class="player-prob" style="font-weight: 700; color: var(--accent-gold); font-size: 0.85rem;">${bestPred.probability}% to score ${bestPred.goal_count}+</span>
+                                </div>
+                                ${statsHtml}
+                            </div>
+                        `;
                         homePlayersList.appendChild(li);
                     });
                 }
@@ -1667,8 +1758,23 @@
                     awayPlayers.forEach(p => {
                         const li = document.createElement("li");
                         li.className = "player-prediction-item";
+                        li.style.padding = "0.75rem 0.5rem";
+                        li.style.borderBottom = "1px solid rgba(255, 255, 255, 0.05)";
                         const bestPred = p.predictions[0] || { goal_count: 1, probability: 0 };
-                        li.innerHTML = `<span class="player-name">${p.name}</span> <span class="player-prob">${bestPred.probability}% to score ${bestPred.goal_count}+</span>`;
+                        
+                        let statsHtml = "";
+                        if (p.mins !== undefined && p.mins !== null) {
+                            statsHtml = `<span style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-top: 0.15rem;">Mins: ${p.mins} | xG/90: ${p.xg_x90} | Goals/90: ${p.goals_x90} | Conv: ${p.conv_pct}%</span>`;
+                        }
+                        li.innerHTML = `
+                            <div style="display: flex; flex-direction: column; width: 100%;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                    <span class="player-name" style="font-weight: 600; color: var(--text-primary);">${p.name}</span> 
+                                    <span class="player-prob" style="font-weight: 700; color: var(--accent-gold); font-size: 0.85rem;">${bestPred.probability}% to score ${bestPred.goal_count}+</span>
+                                </div>
+                                ${statsHtml}
+                            </div>
+                        `;
                         awayPlayersList.appendChild(li);
                     });
                 }

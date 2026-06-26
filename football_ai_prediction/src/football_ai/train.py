@@ -17,7 +17,7 @@ from .features import FEATURE_COLUMNS, build_team_profiles, build_training_frame
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = PROJECT_ROOT / "data"
-MODEL_PATH = PROJECT_ROOT / "models" / "production_model.pkl"
+MODEL_PATH = PROJECT_ROOT / "models" / "soccer_sense.pkl"
 
 
 def create_pipeline(estimator) -> Pipeline:
@@ -347,26 +347,82 @@ class PredictorWrapper:
             else 100 - first_goal_home_probability
         )
 
+        def normalize_player_name(name_val):
+            if not isinstance(name_val, str):
+                return ""
+            import unicodedata
+            nfkd_form = unicodedata.normalize('NFKD', name_val)
+            return "".join([c for c in nfkd_form if not unicodedata.combining(c)]).strip()
+
         def _goal_prediction(player):
-            expected_goals = max(0.05, float(player["xg_per_90"]) * float(player["start_probability"]))
-            one_goal_probability = int(round(min(75, (1 - np.exp(-expected_goals)) * 100)))
-            two_goal_probability = int(round(min(40, one_goal_probability * expected_goals / 2)))
+            mins = float(player.get("mins", 0))
+            xg_90 = float(player.get("xg_x90", player.get("xg_per_90", 0.0)))
+            goals_90 = float(player.get("goals_x90", player.get("goals_per_90", 0.0)))
+            sot_90 = float(player.get("sot_x90", 0.0))
+            conv_pct = float(player.get("conv_pct", 0.0))
+            start_prob = float(player.get("start_probability", 0.8))
+
+            # 1. Bayesian Smoothing (Shrinkage) for low-minute outliers
+            shrinkage = mins / (mins + 90.0) if mins > 0 else 0.0
+            
+            # 2. Blend xG/90 and actual Goals/90 for players with substantial minutes
+            if mins >= 90:
+                weight = min(0.5, mins / 900.0)
+                base_lambda = (1.0 - weight) * xg_90 + weight * goals_90
+                
+                # Incorporate shots on target and conversion
+                if sot_90 > 0 and conv_pct > 0:
+                    conv_dec = conv_pct / 100.0 if conv_pct > 1.0 else conv_pct
+                    shot_derived = sot_90 * conv_dec
+                    base_lambda = 0.7 * base_lambda + 0.3 * shot_derived
+            else:
+                base_lambda = xg_90
+
+            expected_goals = base_lambda * start_prob * shrinkage
+            expected_goals = max(0.01, expected_goals)
+
+            one_goal_probability = int(round(min(85, (1 - np.exp(-expected_goals)) * 100)))
+            two_goal_probability = int(round(min(50, one_goal_probability * expected_goals / 2)))
+            
+            one_goal_probability = max(1, one_goal_probability)
+            two_goal_probability = max(0, two_goal_probability)
+
             predictions = [{"goal_count": 1, "probability": one_goal_probability}]
-            if two_goal_probability >= 10:
+            if two_goal_probability >= 5:
                 predictions.append({"goal_count": 2, "probability": two_goal_probability})
-            return {"name": player["name"], "predictions": predictions}
+                
+            return {
+                "name": player["name"], 
+                "predictions": predictions,
+                "mins": int(mins),
+                "xg_x90": round(xg_90, 2),
+                "goals_x90": round(goals_90, 2),
+                "sot_x90": round(sot_90, 2),
+                "conv_pct": round(conv_pct, 1)
+            }
 
         def _player_predictions(team, cs_prob):
-            players = [p for p in self.player_profiles if normalize_name(p["team"]) == team]
+            team_norm = normalize_player_name(team).lower()
+            players = [
+                p for p in self.player_profiles 
+                if normalize_player_name(normalize_name(p["team"])).lower() == team_norm
+            ]
             if not players:
                 players = [
-                    {"team": team, "name": f"{team} Forward 1", "position": "FW", "xg_per_90": 0.5, "goals_per_90": 0.4, "xa_per_90": 0.2, "assists_per_90": 0.1, "start_probability": 0.9},
-                    {"team": team, "name": f"{team} Forward 2", "position": "FW", "xg_per_90": 0.4, "goals_per_90": 0.3, "xa_per_90": 0.1, "assists_per_90": 0.1, "start_probability": 0.8},
-                    {"team": team, "name": f"{team} Goalkeeper", "position": "GK", "xg_per_90": 0.0, "goals_per_90": 0.0, "xa_per_90": 0.0, "assists_per_90": 0.0, "start_probability": 1.0},
+                    {"team": team, "name": f"{team} Forward 1", "position": "FW", "xg_per_90": 0.5, "goals_per_90": 0.4, "xa_per_90": 0.2, "assists_per_90": 0.1, "start_probability": 0.9, "mins": 90},
+                    {"team": team, "name": f"{team} Forward 2", "position": "FW", "xg_per_90": 0.4, "goals_per_90": 0.3, "xa_per_90": 0.1, "assists_per_90": 0.1, "start_probability": 0.8, "mins": 90},
+                    {"team": team, "name": f"{team} Goalkeeper", "position": "GK", "xg_per_90": 0.0, "goals_per_90": 0.0, "xa_per_90": 0.0, "assists_per_90": 0.0, "start_probability": 1.0, "mins": 90},
                 ]
+                
+            def player_rank_key(p):
+                mins = float(p.get("mins", 0))
+                xg_90 = float(p.get("xg_x90", p.get("xg_per_90", 0.0)))
+                shrinkage = mins / (mins + 90.0) if mins > 0 else 0.0
+                return xg_90 * shrinkage
+
             attackers = sorted(
                 [p for p in players if p["position"] != "GK"],
-                key=lambda p: (float(p.get("xg_per_90", 0)), float(p.get("goals_per_90", 0))),
+                key=player_rank_key,
                 reverse=True,
             )[:3]
             goalkeeper = next(
@@ -649,7 +705,7 @@ def train_model(
     # Define paths
     dev_model_path = model_path.parent / "dev_model.pkl"
     version = prod_artifact.get("version", "1.0.0")
-    versioned_path = model_path.parent / f"production_model_v{version}.pkl"
+    versioned_path = model_path.parent / f"soccer_sense_v{version}.pkl"
 
     dev_wrapper = PredictorWrapper(dev_artifact)
     prod_wrapper = PredictorWrapper(prod_artifact)
@@ -932,26 +988,88 @@ class PredictorWrapper:
             else 100 - first_goal_home_probability
         )
 
+        def normalize_player_name(name_val):
+            if not isinstance(name_val, str):
+                return ""
+            import unicodedata
+            nfkd_form = unicodedata.normalize('NFKD', name_val)
+            return "".join([c for c in nfkd_form if not unicodedata.combining(c)]).strip()
+
         def _goal_prediction(player):
-            expected_goals = max(0.05, float(player["xg_per_90"]) * float(player["start_probability"]))
-            one_goal_probability = int(round(min(75, (1 - np.exp(-expected_goals)) * 100)))
-            two_goal_probability = int(round(min(40, one_goal_probability * expected_goals / 2)))
-            predictions = [{{"goal_count": 1, "probability": one_goal_probability}}]
-            if two_goal_probability >= 10:
-                predictions.append({{"goal_count": 2, "probability": two_goal_probability}})
-            return {{"name": player["name"], "predictions": predictions}}
+            mins = float(player.get("mins", 0))
+            xg_90 = float(player.get("xg_x90", player.get("xg_per_90", 0.0)))
+            goals_90 = float(player.get("goals_x90", player.get("goals_per_90", 0.0)))
+            sot_90 = float(player.get("sot_x90", 0.0))
+            conv_pct = float(player.get("conv_pct", 0.0))
+            start_prob = float(player.get("start_probability", 0.8))
+
+            # 1. Bayesian Smoothing (Shrinkage) for low-minute outliers
+            shrinkage = mins / (mins + 90.0) if mins > 0 else 0.0
+            
+            # 2. Blend xG/90 and actual Goals/90 for players with substantial minutes
+            if mins >= 90:
+                weight = min(0.5, mins / 900.0)
+                base_lambda = (1.0 - weight) * xg_90 + weight * goals_90
+                
+                # Incorporate shots on target and conversion
+                if sot_90 > 0 and conv_pct > 0:
+                    conv_dec = conv_pct / 100.0 if conv_pct > 1.0 else conv_pct
+                    shot_derived = sot_90 * conv_dec
+                    base_lambda = 0.7 * base_lambda + 0.3 * shot_derived
+            else:
+                base_lambda = xg_90
+
+            expected_goals = base_lambda * start_prob * shrinkage
+            expected_goals = max(0.01, expected_goals)
+
+            one_goal_probability = int(round(min(85, (1 - np.exp(-expected_goals)) * 100)))
+            two_goal_probability = int(round(min(50, one_goal_probability * expected_goals / 2)))
+            
+            one_goal_probability = max(1, one_goal_probability)
+            two_goal_probability = max(0, two_goal_probability)
+
+            predictions = [{{
+                "goal_count": 1, 
+                "probability": one_goal_probability
+            }}]
+            if two_goal_probability >= 5:
+                predictions.append({{
+                    "goal_count": 2, 
+                    "probability": two_goal_probability
+                }})
+                
+            return {{
+                "name": player["name"], 
+                "predictions": predictions,
+                "mins": int(mins),
+                "xg_x90": round(xg_90, 2),
+                "goals_x90": round(goals_90, 2),
+                "sot_x90": round(sot_90, 2),
+                "conv_pct": round(conv_pct, 1)
+            }}
 
         def _player_predictions(team, cs_prob):
-            players = [p for p in self.player_profiles if normalize_name(p["team"]) == team]
+            team_norm = normalize_player_name(team).lower()
+            players = [
+                p for p in self.player_profiles 
+                if normalize_player_name(normalize_name(p["team"])).lower() == team_norm
+            ]
             if not players:
                 players = [
-                    {{"team": team, "name": f"{{team}} Forward 1", "position": "FW", "xg_per_90": 0.5, "goals_per_90": 0.4, "xa_per_90": 0.2, "assists_per_90": 0.1, "start_probability": 0.9}},
-                    {{"team": team, "name": f"{{team}} Forward 2", "position": "FW", "xg_per_90": 0.4, "goals_per_90": 0.3, "xa_per_90": 0.1, "assists_per_90": 0.1, "start_probability": 0.8}},
-                    {{"team": team, "name": f"{{team}} Goalkeeper", "position": "GK", "xg_per_90": 0.0, "goals_per_90": 0.0, "xa_per_90": 0.0, "assists_per_90": 0.0, "start_probability": 1.0}},
+                    {{"team": team, "name": f"{{team}} Forward 1", "position": "FW", "xg_per_90": 0.5, "goals_per_90": 0.4, "xa_per_90": 0.2, "assists_per_90": 0.1, "start_probability": 0.9, "mins": 90}},
+                    {{"team": team, "name": f"{{team}} Forward 2", "position": "FW", "xg_per_90": 0.4, "goals_per_90": 0.3, "xa_per_90": 0.1, "assists_per_90": 0.1, "start_probability": 0.8, "mins": 90}},
+                    {{"team": team, "name": f"{{team}} Goalkeeper", "position": "GK", "xg_per_90": 0.0, "goals_per_90": 0.0, "xa_per_90": 0.0, "assists_per_90": 0.0, "start_probability": 1.0, "mins": 90}},
                 ]
+                
+            def player_rank_key(p):
+                mins = float(p.get("mins", 0))
+                xg_90 = float(p.get("xg_x90", p.get("xg_per_90", 0.0)))
+                shrinkage = mins / (mins + 90.0) if mins > 0 else 0.0
+                return xg_90 * shrinkage
+
             attackers = sorted(
                 [p for p in players if p["position"] != "GK"],
-                key=lambda p: (float(p.get("xg_per_90", 0)), float(p.get("goals_per_90", 0))),
+                key=player_rank_key,
                 reverse=True,
             )[:3]
             goalkeeper = next(
@@ -1062,8 +1180,8 @@ loaded_model = PredictorWrapper(artifact)
         try:
             import shutil
             shutil.copy2(dev_model_path, parent_models / "dev_model.pkl")
-            shutil.copy2(model_path, parent_models / "production_model.pkl")
-            shutil.copy2(versioned_path, parent_models / f"production_model_v{version}.pkl")
+            shutil.copy2(model_path, parent_models / "soccer_sense.pkl")
+            shutil.copy2(versioned_path, parent_models / f"soccer_sense_v{version}.pkl")
             print("Successfully synchronized models to parent models directory.")
         except Exception as e:
             print(f"Warning: Could not sync models to parent directory: {e}")
