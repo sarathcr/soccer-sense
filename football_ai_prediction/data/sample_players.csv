@@ -1,0 +1,4 @@
+team,name,position,xg_per_90,goals_per_90,xa_per_90,assists_per_90,start_probability,status
+TestHome,Player One,FW,0.5,0.4,0.2,0.1,0.9,active
+TestHome,Player Two,GK,0.0,0.0,0.0,0.0,1.0,active
+TestAway,Player Three,FW,0.4,0.3,0.1,0.1,0.8,active
