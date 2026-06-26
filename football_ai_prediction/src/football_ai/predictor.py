@@ -163,9 +163,21 @@ class FootballPredictor:
         elo_diff = home_elo - away_elo
         rank_diff = away_rank - home_rank
 
-        # Predict expected goals (lambdas)
-        home_goals_float = float(self.artifact["home_goals_model"].predict(features)[0])
-        away_goals_float = float(self.artifact["away_goals_model"].predict(features)[0])
+        # Neutral venue expected goals averaging (FIFA World Cup)
+        features_swapped = build_inference_features(
+            away_team,
+            home_team,
+            self.artifact["team_profiles"],
+        )
+
+        goals_a_as_home = float(self.artifact["home_goals_model"].predict(features)[0])
+        goals_a_as_away = float(self.artifact["away_goals_model"].predict(features_swapped)[0])
+        goals_b_as_away = float(self.artifact["away_goals_model"].predict(features)[0])
+        goals_b_as_home = float(self.artifact["home_goals_model"].predict(features_swapped)[0])
+
+        home_goals_float = (goals_a_as_home + goals_a_as_away) / 2.0
+        away_goals_float = (goals_b_as_away + goals_b_as_home) / 2.0
+
         home_goals_float = max(0.01, home_goals_float)
         away_goals_float = max(0.01, away_goals_float)
 

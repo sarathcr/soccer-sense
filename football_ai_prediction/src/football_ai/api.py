@@ -24,6 +24,10 @@ class CrawlTrainInput(BaseModel):
     players_url: str | None = None
 
 
+class UpdateVersionInput(BaseModel):
+    version: str
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -184,7 +188,8 @@ def train_from_upload(
             "metrics": artifact["metrics"],
             "teams": sorted(list(artifact["team_profiles"].keys())),
             "warnings": warnings,
-            "player_validation_status": player_validation_status
+            "player_validation_status": player_validation_status,
+            "version": artifact.get("version", "1.0.0")
         }
     except Exception as e:
         import traceback
@@ -264,7 +269,8 @@ def train_from_url(payload: CrawlTrainInput):
             "metrics": artifact["metrics"],
             "teams": sorted(list(artifact["team_profiles"].keys())),
             "warnings": warnings,
-            "player_validation_status": player_validation_status
+            "player_validation_status": player_validation_status,
+            "version": artifact.get("version", "1.0.0")
         }
     except Exception as e:
         import traceback
@@ -339,6 +345,43 @@ def get_team_profiles():
     try:
         return predictor.artifact.get("team_profiles", {})
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/model-version")
+def get_model_version() -> dict[str, str]:
+    try:
+        return {"version": predictor.artifact.get("version", "1.0.0")}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/update-version")
+def update_version(payload: UpdateVersionInput):
+    global predictor
+    try:
+        from .train import save_model_artifact
+        # Update version in loaded predictor artifact
+        predictor.artifact["version"] = payload.version
+        
+        # Save updated model to MODEL_PATH
+        save_model_artifact(predictor, MODEL_PATH)
+        
+        # Save versioned copy
+        versioned_path = MODEL_PATH.parent / f"soccer_sense_v{payload.version}.pkl"
+        save_model_artifact(predictor, versioned_path)
+        
+        # Re-initialize predictor
+        predictor = FootballPredictor(MODEL_PATH)
+        
+        return {
+            "status": "success",
+            "message": f"Model version successfully updated to {payload.version}.",
+            "version": payload.version
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 

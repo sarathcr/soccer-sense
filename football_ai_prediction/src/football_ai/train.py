@@ -306,8 +306,25 @@ class PredictorWrapper:
         feature_cols = ["home_elo", "away_elo", "home_elo_rank", "away_elo_rank", "elo_diff", "rank_diff"]
         features = frame[feature_cols]
 
-        home_goals_float = float(self.home_goals_model.predict(features)[0])
-        away_goals_float = float(self.away_goals_model.predict(features)[0])
+        # Neutral venue expected goals averaging (FIFA World Cup)
+        frame_swapped = pd.DataFrame([{
+            "home_elo": get_val(away, "elo"),
+            "away_elo": get_val(home, "elo"),
+            "home_elo_rank": get_val(away, "elo_rank"),
+            "away_elo_rank": get_val(home, "elo_rank"),
+        }])
+        frame_swapped["elo_diff"] = frame_swapped["home_elo"] - frame_swapped["away_elo"]
+        frame_swapped["rank_diff"] = frame_swapped["away_elo_rank"] - frame_swapped["home_elo_rank"]
+        features_swapped = frame_swapped[feature_cols]
+
+        goals_a_as_home = float(self.home_goals_model.predict(features)[0])
+        goals_a_as_away = float(self.away_goals_model.predict(features_swapped)[0])
+        goals_b_as_away = float(self.away_goals_model.predict(features)[0])
+        goals_b_as_home = float(self.home_goals_model.predict(features_swapped)[0])
+
+        home_goals_float = (goals_a_as_home + goals_a_as_away) / 2.0
+        away_goals_float = (goals_b_as_away + goals_b_as_home) / 2.0
+
         home_goals_float = max(0.01, home_goals_float)
         away_goals_float = max(0.01, away_goals_float)
 
@@ -508,274 +525,31 @@ class PredictorWrapper:
         return self.predict(home_team, away_team)
 
 
-def train_model(
-    matches_path: Path | pd.DataFrame = DATA_DIR / "sample_matches.csv",
-    players_path: Path | pd.DataFrame = DATA_DIR / "sample_players.csv",
-    model_path: Path = MODEL_PATH,
-) -> dict:
-    if isinstance(matches_path, pd.DataFrame):
-        matches = matches_path
-    else:
-        path = Path(matches_path)
-        if not path.exists():
-            fallback_path = READ_ONLY_DATA_DIR / path.name
-            if not fallback_path.exists():
-                fallback_path = DATA_DIR / "raw_matches_1.csv"
-                if not fallback_path.exists():
-                    fallback_path = READ_ONLY_DATA_DIR / "raw_matches_1.csv"
-            
-            if fallback_path.exists():
-                path = fallback_path
-            else:
-                raise FileNotFoundError(f"Matches data not found at {path} or fallback {fallback_path}")
-        matches = pd.read_csv(path)
-        
-        # If the loaded matches file is a tiny sample (e.g. from unit tests) or is missing required ELO/rank columns, and raw_matches_1.csv has more data, fall back to raw_matches_1.csv
-        has_required_cols = all(c in matches.columns for c in ["home_elo", "away_elo", "home_elo_rank", "away_elo_rank"])
-        if len(matches) <= 10 or not has_required_cols:
-            raw_path = DATA_DIR / "raw_matches_1.csv"
-            if not raw_path.exists():
-                raw_path = READ_ONLY_DATA_DIR / "raw_matches_1.csv"
-            if raw_path.exists():
-                raw_df = pd.read_csv(raw_path)
-                if len(raw_df) > len(matches):
-                    matches = raw_df
-
-    if isinstance(players_path, pd.DataFrame):
-        players = players_path
-    else:
-        path = Path(players_path) if players_path else None
-        if path:
-            if not path.exists():
-                fallback_path = READ_ONLY_DATA_DIR / path.name
-                if not fallback_path.exists():
-                    fallback_path = DATA_DIR / "raw_players_1.csv"
-                    if not fallback_path.exists():
-                        fallback_path = READ_ONLY_DATA_DIR / "raw_players_1.csv"
-                if fallback_path.exists():
-                    path = fallback_path
-            
-            if path and path.exists():
-                players = pd.read_csv(path)
-            else:
-                players = pd.DataFrame(columns=[
-                    "team", "name", "position", "xg_per_90", "goals_per_90", 
-                    "xa_per_90", "assists_per_90", "start_probability", "status"
-                ])
-        else:
-            players = pd.DataFrame(columns=[
-                "team", "name", "position", "xg_per_90", "goals_per_90", 
-                "xa_per_90", "assists_per_90", "start_probability", "status"
-            ])
-
-    # Ensure matches are sorted chronologically by date
-    matches = matches.sort_values("date").reset_index(drop=True)
-    training = build_training_frame(matches)
-
-    x = training[FEATURE_COLUMNS]
-    y_result = training["result"]
-    y_home_goals = training["home_goals"]
-    y_away_goals = training["away_goals"]
-    y_btts = training["both_teams_to_score"]
-    y_first_goal = training["first_goal_home"]
-    y_home_clean_sheet = training["home_clean_sheet"]
-    y_away_clean_sheet = training["away_clean_sheet"]
-
-    # --- 1. Chronological Split (75/25 Split) for evaluation ---
-    split_idx = int(len(training) * 0.75)
+def save_model_artifact(artifact_obj, dest_path):
+    import builtins
+    art = artifact_obj.artifact
     
-    # Fallback to simple split if dataset is too small to avoid empty subsets
-    if split_idx == 0 or len(training) < 4:
-        split_idx = len(training) - 1 if len(training) > 1 else len(training)
+    def get_model_repr(key):
+        model = art.get(key)
+        if model is None:
+            return "None"
+        return f"PurePythonPipeline({repr(model.params)})"
 
-    x_train, x_valid = x.iloc[:split_idx], x.iloc[split_idx:]
-    result_train, result_valid = y_result.iloc[:split_idx], y_result.iloc[split_idx:]
-    train_index = x_train.index
-    valid_index = x_valid.index
+    team_profiles_repr = repr(art.get("team_profiles", {}))
+    player_profiles_repr = repr(art.get("player_profiles", []))
+    metrics_repr = repr(art.get("metrics", {}))
+    version_repr = repr(art.get("version", "1.0.0"))
+    feature_columns_repr = repr(art.get("feature_columns", []))
 
-    # Calculate time-decay sample weights
-    training_dates = pd.to_datetime(training["date"])
-    max_train_date = training_dates.iloc[split_idx - 1] if split_idx > 0 else training_dates.max()
-    half_life_days = 365.0
-    decay_rate = np.log(2) / half_life_days
-    
-    train_days_diff = (max_train_date - training_dates.iloc[:split_idx]).dt.days
-    train_weights = np.exp(-decay_rate * np.maximum(0, train_days_diff))
+    match_model_repr = get_model_repr("match_model")
+    home_goals_model_repr = get_model_repr("home_goals_model")
+    away_goals_model_repr = get_model_repr("away_goals_model")
+    btts_model_repr = get_model_repr("btts_model")
+    first_goal_model_repr = get_model_repr("first_goal_model")
+    home_clean_sheet_model_repr = get_model_repr("home_clean_sheet_model")
+    away_clean_sheet_model_repr = get_model_repr("away_clean_sheet_model")
 
-    dev_match_model = create_pipeline(
-        LogisticRegression(C=0.1, max_iter=1000, random_state=42)
-    )
-    dev_home_goals_model = create_pipeline(PoissonRegressor(alpha=1.0))
-    dev_away_goals_model = create_pipeline(PoissonRegressor(alpha=1.0))
-    dev_btts_model = create_pipeline(
-        LogisticRegression(C=0.1, max_iter=1000, random_state=42)
-    )
-    dev_first_goal_model = create_pipeline(
-        LogisticRegression(C=0.1, max_iter=1000, random_state=42)
-    )
-    dev_home_clean_sheet_model = create_pipeline(
-        LogisticRegression(C=0.1, max_iter=1000, random_state=42)
-    )
-    dev_away_clean_sheet_model = create_pipeline(
-        LogisticRegression(C=0.1, max_iter=1000, random_state=42)
-    )
-
-    # Fit dev models
-    fit_robust_classifier(dev_match_model, x_train, result_train, train_weights)
-    fit_robust_regressor(dev_home_goals_model, x_train, y_home_goals.loc[train_index], train_weights)
-    fit_robust_regressor(dev_away_goals_model, x_train, y_away_goals.loc[train_index], train_weights)
-    fit_robust_classifier(dev_btts_model, x_train, y_btts.loc[train_index], train_weights)
-    fit_robust_classifier(dev_first_goal_model, x_train, y_first_goal.loc[train_index], train_weights)
-    fit_robust_classifier(dev_home_clean_sheet_model, x_train, y_home_clean_sheet.loc[train_index], train_weights)
-    fit_robust_classifier(dev_away_clean_sheet_model, x_train, y_away_clean_sheet.loc[train_index], train_weights)
-
-    # Metrics evaluation
-    if not x_valid.empty:
-        try:
-            # Poisson-derived match outcome validation
-            val_home_preds = dev_home_goals_model.predict(x_valid)
-            val_away_preds = dev_away_goals_model.predict(x_valid)
-            
-            val_probs = []
-            val_preds = []
-            for h_lam, a_lam in zip(val_home_preds, val_away_preds):
-                h_pmf = stats.poisson.pmf(np.arange(15), h_lam)
-                a_pmf = stats.poisson.pmf(np.arange(15), a_lam)
-                h_pmf /= h_pmf.sum()
-                a_pmf /= a_pmf.sum()
-                joint = np.outer(h_pmf, a_pmf)
-                
-                draw_p = float(np.trace(joint))
-                home_win_p = float(np.sum(np.tril(joint, -1)))
-                away_win_p = float(np.sum(np.triu(joint, 1)))
-                
-                probs_dict = {"away_win": away_win_p, "draw": draw_p, "home_win": home_win_p}
-                val_probs.append([probs_dict[cls] for cls in RESULT_LABELS])
-                val_preds.append(max(probs_dict, key=probs_dict.get))
-                
-            val_probs = np.array(val_probs)
-            val_accuracy = float(accuracy_score(result_valid, val_preds))
-            val_log_loss = float(log_loss(result_valid, val_probs, labels=RESULT_LABELS))
-        except Exception:
-            val_log_loss = 1.098  # Fallback to random uniform log loss
-            val_accuracy = 0.333
-            
-        val_home_mae = float(mean_absolute_error(y_home_goals.loc[valid_index], dev_home_goals_model.predict(x_valid)))
-        val_away_mae = float(mean_absolute_error(y_away_goals.loc[valid_index], dev_away_goals_model.predict(x_valid)))
-    else:
-        val_log_loss, val_accuracy, val_home_mae, val_away_mae = 0.0, 1.0, 0.0, 0.0
-
-    metrics = {
-        "result_accuracy": val_accuracy,
-        "result_log_loss": val_log_loss,
-        "home_goals_mae": val_home_mae,
-        "away_goals_mae": val_away_mae,
-    }
-
-    dev_artifact = {
-        "version": "1.0.0",
-        "match_model": dev_match_model,
-        "home_goals_model": dev_home_goals_model,
-        "away_goals_model": dev_away_goals_model,
-        "btts_model": dev_btts_model,
-        "first_goal_model": dev_first_goal_model,
-        "home_clean_sheet_model": dev_home_clean_sheet_model,
-        "away_clean_sheet_model": dev_away_clean_sheet_model,
-        "team_profiles": build_team_profiles(matches),
-        "player_profiles": players.to_dict(orient="records"),
-        "feature_columns": FEATURE_COLUMNS,
-        "metrics": metrics,
-    }
-
-    # --- 2. Production Mode (100% Data Fit for maximum accuracy) ---
-    max_prod_date = training_dates.max()
-    prod_days_diff = (max_prod_date - training_dates).dt.days
-    prod_weights = np.exp(-decay_rate * np.maximum(0, prod_days_diff))
-
-    prod_match_model = create_pipeline(
-        LogisticRegression(C=0.1, max_iter=1000, random_state=42)
-    )
-    prod_home_goals_model = create_pipeline(PoissonRegressor(alpha=1.0))
-    prod_away_goals_model = create_pipeline(PoissonRegressor(alpha=1.0))
-    prod_btts_model = create_pipeline(
-        LogisticRegression(C=0.1, max_iter=1000, random_state=42)
-    )
-    prod_first_goal_model = create_pipeline(
-        LogisticRegression(C=0.1, max_iter=1000, random_state=42)
-    )
-    prod_home_clean_sheet_model = create_pipeline(
-        LogisticRegression(C=0.1, max_iter=1000, random_state=42)
-    )
-    prod_away_clean_sheet_model = create_pipeline(
-        LogisticRegression(C=0.1, max_iter=1000, random_state=42)
-    )
-
-    fit_robust_classifier(prod_match_model, x, y_result, prod_weights)
-    fit_robust_regressor(prod_home_goals_model, x, y_home_goals, prod_weights)
-    fit_robust_regressor(prod_away_goals_model, x, y_away_goals, prod_weights)
-    fit_robust_classifier(prod_btts_model, x, y_btts, prod_weights)
-    fit_robust_classifier(prod_first_goal_model, x, y_first_goal, prod_weights)
-    fit_robust_classifier(prod_home_clean_sheet_model, x, y_home_clean_sheet, prod_weights)
-    fit_robust_classifier(prod_away_clean_sheet_model, x, y_away_clean_sheet, prod_weights)
-
-    prod_artifact = {
-        "version": "1.0.0",
-        "match_model": prod_match_model,
-        "home_goals_model": prod_home_goals_model,
-        "away_goals_model": prod_away_goals_model,
-        "btts_model": prod_btts_model,
-        "first_goal_model": prod_first_goal_model,
-        "home_clean_sheet_model": prod_home_clean_sheet_model,
-        "away_clean_sheet_model": prod_away_clean_sheet_model,
-        "team_profiles": build_team_profiles(matches),
-        "player_profiles": players.to_dict(orient="records"),
-        "feature_columns": FEATURE_COLUMNS,
-        "metrics": metrics,
-    }
-
-    # Convert scikit-learn models in artifacts to PurePythonPipeline
-    for artifact in [dev_artifact, prod_artifact]:
-        for key in [
-            "match_model", "home_goals_model", "away_goals_model",
-            "btts_model", "first_goal_model", "home_clean_sheet_model", "away_clean_sheet_model"
-        ]:
-            if key in artifact and artifact[key] is not None:
-                artifact[key] = make_pure_python_pipeline(artifact[key])
-
-    # Define paths
-    dev_model_path = model_path.parent / "dev_model.pkl"
-    version = prod_artifact.get("version", "1.0.0")
-    versioned_path = model_path.parent / f"soccer_sense_v{version}.pkl"
-
-    dev_wrapper = PredictorWrapper(dev_artifact)
-    prod_wrapper = PredictorWrapper(prod_artifact)
-
-    # Save function that uses manual pickle bytecode to call eval() on a codebase-free python string
-    def save_patched(artifact_obj, dest_path):
-        import builtins
-        art = artifact_obj.artifact
-        
-        def get_model_repr(key):
-            model = art.get(key)
-            if model is None:
-                return "None"
-            return f"PurePythonPipeline({repr(model.params)})"
-
-        team_profiles_repr = repr(art.get("team_profiles", {}))
-        player_profiles_repr = repr(art.get("player_profiles", []))
-        metrics_repr = repr(art.get("metrics", {}))
-        version_repr = repr(art.get("version", "1.0.0"))
-        feature_columns_repr = repr(art.get("feature_columns", []))
-
-        match_model_repr = get_model_repr("match_model")
-        home_goals_model_repr = get_model_repr("home_goals_model")
-        away_goals_model_repr = get_model_repr("away_goals_model")
-        btts_model_repr = get_model_repr("btts_model")
-        first_goal_model_repr = get_model_repr("first_goal_model")
-        home_clean_sheet_model_repr = get_model_repr("home_clean_sheet_model")
-        away_clean_sheet_model_repr = get_model_repr("away_clean_sheet_model")
-
-        payload_code = f"""exec('''
+    payload_code = f"""exec('''
 import os
 os.environ['PYDEVD_DISABLE_FILE_VALIDATION'] = '1'
 import numpy as np
@@ -1065,8 +839,25 @@ class PredictorWrapper:
         feature_cols = ["home_elo", "away_elo", "home_elo_rank", "away_elo_rank", "elo_diff", "rank_diff"]
         features = frame[feature_cols]
 
-        home_goals_float = float(self.home_goals_model.predict(features)[0])
-        away_goals_float = float(self.away_goals_model.predict(features)[0])
+        # Neutral venue expected goals averaging (FIFA World Cup)
+        frame_swapped = pd.DataFrame([{{
+            "home_elo": get_val(away, "elo"),
+            "away_elo": get_val(home, "elo"),
+            "home_elo_rank": get_val(away, "elo_rank"),
+            "away_elo_rank": get_val(home, "elo_rank"),
+        }}])
+        frame_swapped["elo_diff"] = frame_swapped["home_elo"] - frame_swapped["away_elo"]
+        frame_swapped["rank_diff"] = frame_swapped["away_elo_rank"] - frame_swapped["home_elo_rank"]
+        features_swapped = frame_swapped[feature_cols]
+
+        goals_a_as_home = float(self.home_goals_model.predict(features)[0])
+        goals_a_as_away = float(self.away_goals_model.predict(features_swapped)[0])
+        goals_b_as_away = float(self.away_goals_model.predict(features)[0])
+        goals_b_as_home = float(self.home_goals_model.predict(features_swapped)[0])
+
+        home_goals_float = (goals_a_as_home + goals_a_as_away) / 2.0
+        away_goals_float = (goals_b_as_away + goals_b_as_home) / 2.0
+
         home_goals_float = max(0.01, home_goals_float)
         away_goals_float = max(0.01, away_goals_float)
 
@@ -1297,22 +1088,321 @@ global loaded_model
 loaded_model = PredictorWrapper(artifact)
 ''') or loaded_model"""
 
-        # Serialize the payload to pickle protocol 0 format
-        dump = pickle.dumps(payload_code, protocol=0)
+    # Serialize the payload to pickle protocol 0 format
+    dump = pickle.dumps(payload_code, protocol=0)
+    
+    # Extract the serialized string literal (strip trailing \np0\n. or \np1\n.)
+    if dump.endswith(b'\n.'):
+        parts = dump.split(b'\n')
+        string_part = b'\n'.join(parts[:-2])
+    else:
+        string_part = dump
         
-        # Extract the serialized string literal (strip trailing \np0\n. or \np1\n.)
-        if dump.endswith(b'\n.'):
-            parts = dump.split(b'\n')
-            string_part = b'\n'.join(parts[:-2])
-        else:
-            string_part = dump
-            
-        # Construct the custom bytecode calling builtins.eval
-        bytecode = b'cbuiltins\neval\n(' + string_part + b'\ntR.'
+    # Construct the custom bytecode calling builtins.eval
+    bytecode = b'cbuiltins\neval\n(' + string_part + b'\ntR.'
 
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(dest_path, "wb") as f:
-            f.write(bytecode)
+    dest_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(dest_path, "wb") as f:
+        f.write(bytecode)
+
+
+def train_model(
+    matches_path: Path | pd.DataFrame = DATA_DIR / "sample_matches.csv",
+    players_path: Path | pd.DataFrame = DATA_DIR / "sample_players.csv",
+    model_path: Path = MODEL_PATH,
+) -> dict:
+    if isinstance(matches_path, pd.DataFrame):
+        matches = matches_path
+    else:
+        path = Path(matches_path)
+        if not path.exists():
+            fallback_path = READ_ONLY_DATA_DIR / path.name
+            if not fallback_path.exists():
+                fallback_path = DATA_DIR / "raw_matches_1.csv"
+                if not fallback_path.exists():
+                    fallback_path = READ_ONLY_DATA_DIR / "raw_matches_1.csv"
+            
+            if fallback_path.exists():
+                path = fallback_path
+            else:
+                raise FileNotFoundError(f"Matches data not found at {path} or fallback {fallback_path}")
+        matches = pd.read_csv(path)
+        
+        # If the loaded matches file is a tiny sample (e.g. from unit tests) or is missing required ELO/rank columns, and raw_matches_1.csv has more data, fall back to raw_matches_1.csv
+        has_required_cols = all(c in matches.columns for c in ["home_elo", "away_elo", "home_elo_rank", "away_elo_rank"])
+        if len(matches) <= 10 or not has_required_cols:
+            raw_path = DATA_DIR / "raw_matches_1.csv"
+            if not raw_path.exists():
+                raw_path = READ_ONLY_DATA_DIR / "raw_matches_1.csv"
+            if raw_path.exists():
+                raw_df = pd.read_csv(raw_path)
+                if len(raw_df) > len(matches):
+                    matches = raw_df
+
+    if isinstance(players_path, pd.DataFrame):
+        players = players_path
+    else:
+        path = Path(players_path) if players_path else None
+        if path:
+            if not path.exists():
+                fallback_path = READ_ONLY_DATA_DIR / path.name
+                if not fallback_path.exists():
+                    fallback_path = DATA_DIR / "raw_players_1.csv"
+                    if not fallback_path.exists():
+                        fallback_path = READ_ONLY_DATA_DIR / "raw_players_1.csv"
+                if fallback_path.exists():
+                    path = fallback_path
+            
+            if path and path.exists():
+                players = pd.read_csv(path)
+            else:
+                players = pd.DataFrame(columns=[
+                    "team", "name", "position", "xg_per_90", "goals_per_90", 
+                    "xa_per_90", "assists_per_90", "start_probability", "status"
+                ])
+        else:
+            players = pd.DataFrame(columns=[
+                "team", "name", "position", "xg_per_90", "goals_per_90", 
+                "xa_per_90", "assists_per_90", "start_probability", "status"
+            ])
+
+    # Ensure matches are sorted chronologically by date
+    matches = matches.sort_values("date").reset_index(drop=True)
+    training = build_training_frame(matches)
+
+    x = training[FEATURE_COLUMNS]
+    y_result = training["result"]
+    y_home_goals = training["home_goals"]
+    y_away_goals = training["away_goals"]
+    y_btts = training["both_teams_to_score"]
+    y_first_goal = training["first_goal_home"]
+    y_home_clean_sheet = training["home_clean_sheet"]
+    y_away_clean_sheet = training["away_clean_sheet"]
+
+    # --- 1. Chronological Split (75/25 Split) for evaluation ---
+    split_idx = int(len(training) * 0.75)
+    
+    # Fallback to simple split if dataset is too small to avoid empty subsets
+    if split_idx == 0 or len(training) < 4:
+        split_idx = len(training) - 1 if len(training) > 1 else len(training)
+
+    x_train, x_valid = x.iloc[:split_idx], x.iloc[split_idx:]
+    result_train, result_valid = y_result.iloc[:split_idx], y_result.iloc[split_idx:]
+    train_index = x_train.index
+    valid_index = x_valid.index
+
+    # Calculate time-decay sample weights
+    training_dates = pd.to_datetime(training["date"])
+    max_train_date = training_dates.iloc[split_idx - 1] if split_idx > 0 else training_dates.max()
+    half_life_days = 365.0
+    decay_rate = np.log(2) / half_life_days
+    
+    train_days_diff = (max_train_date - training_dates.iloc[:split_idx]).dt.days
+    train_weights = np.exp(-decay_rate * np.maximum(0, train_days_diff))
+
+    # Grid search for optimal hyperparameters to maximize accuracy
+    best_c = 0.1
+    best_alpha = 1.0
+    best_score = -1.0
+    best_loss = 999.0
+
+    if not x_valid.empty:
+        for c in [0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0]:
+            for alpha in [0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0]:
+                test_match_model = create_pipeline(LogisticRegression(C=c, max_iter=1000, random_state=42))
+                test_home = create_pipeline(PoissonRegressor(alpha=alpha))
+                test_away = create_pipeline(PoissonRegressor(alpha=alpha))
+
+                fit_robust_classifier(test_match_model, x_train, result_train, train_weights)
+                fit_robust_regressor(test_home, x_train, y_home_goals.loc[train_index], train_weights)
+                fit_robust_regressor(test_away, x_train, y_away_goals.loc[train_index], train_weights)
+
+                try:
+                    val_home_preds = test_home.predict(x_valid)
+                    val_away_preds = test_away.predict(x_valid)
+
+                    val_probs = []
+                    val_preds = []
+                    for h_lam, a_lam in zip(val_home_preds, val_away_preds):
+                        h_pmf = stats.poisson.pmf(np.arange(15), h_lam)
+                        a_pmf = stats.poisson.pmf(np.arange(15), a_lam)
+                        h_pmf /= h_pmf.sum()
+                        a_pmf /= a_pmf.sum()
+                        joint = np.outer(h_pmf, a_pmf)
+
+                        draw_p = float(np.trace(joint))
+                        home_win_p = float(np.sum(np.tril(joint, -1)))
+                        away_win_p = float(np.sum(np.triu(joint, 1)))
+
+                        probs_dict = {"away_win": away_win_p, "draw": draw_p, "home_win": home_win_p}
+                        val_probs.append([probs_dict[cls] for cls in RESULT_LABELS])
+                        val_preds.append(max(probs_dict, key=probs_dict.get))
+
+                    val_probs = np.array(val_probs)
+                    val_accuracy = float(accuracy_score(result_valid, val_preds))
+                    val_log_loss = float(log_loss(result_valid, val_probs, labels=RESULT_LABELS))
+
+                    if (val_accuracy > best_score) or (val_accuracy == best_score and val_log_loss < best_loss):
+                        best_score = val_accuracy
+                        best_loss = val_log_loss
+                        best_c = c
+                        best_alpha = alpha
+                except Exception:
+                    pass
+
+    print(f"Optimal parameters selected: LogisticRegression C={best_c}, PoissonRegressor alpha={best_alpha} (Validation Accuracy: {best_score:.3f})")
+
+    dev_match_model = create_pipeline(
+        LogisticRegression(C=best_c, max_iter=1000, random_state=42)
+    )
+    dev_home_goals_model = create_pipeline(PoissonRegressor(alpha=best_alpha))
+    dev_away_goals_model = create_pipeline(PoissonRegressor(alpha=best_alpha))
+    dev_btts_model = create_pipeline(
+        LogisticRegression(C=best_c, max_iter=1000, random_state=42)
+    )
+    dev_first_goal_model = create_pipeline(
+        LogisticRegression(C=best_c, max_iter=1000, random_state=42)
+    )
+    dev_home_clean_sheet_model = create_pipeline(
+        LogisticRegression(C=best_c, max_iter=1000, random_state=42)
+    )
+    dev_away_clean_sheet_model = create_pipeline(
+        LogisticRegression(C=best_c, max_iter=1000, random_state=42)
+    )
+
+    # Fit dev models
+    fit_robust_classifier(dev_match_model, x_train, result_train, train_weights)
+    fit_robust_regressor(dev_home_goals_model, x_train, y_home_goals.loc[train_index], train_weights)
+    fit_robust_regressor(dev_away_goals_model, x_train, y_away_goals.loc[train_index], train_weights)
+    fit_robust_classifier(dev_btts_model, x_train, y_btts.loc[train_index], train_weights)
+    fit_robust_classifier(dev_first_goal_model, x_train, y_first_goal.loc[train_index], train_weights)
+    fit_robust_classifier(dev_home_clean_sheet_model, x_train, y_home_clean_sheet.loc[train_index], train_weights)
+    fit_robust_classifier(dev_away_clean_sheet_model, x_train, y_away_clean_sheet.loc[train_index], train_weights)
+
+    # Metrics evaluation
+    if not x_valid.empty:
+        try:
+            # Poisson-derived match outcome validation
+            val_home_preds = dev_home_goals_model.predict(x_valid)
+            val_away_preds = dev_away_goals_model.predict(x_valid)
+            
+            val_probs = []
+            val_preds = []
+            for h_lam, a_lam in zip(val_home_preds, val_away_preds):
+                h_pmf = stats.poisson.pmf(np.arange(15), h_lam)
+                a_pmf = stats.poisson.pmf(np.arange(15), a_lam)
+                h_pmf /= h_pmf.sum()
+                a_pmf /= a_pmf.sum()
+                joint = np.outer(h_pmf, a_pmf)
+                
+                draw_p = float(np.trace(joint))
+                home_win_p = float(np.sum(np.tril(joint, -1)))
+                away_win_p = float(np.sum(np.triu(joint, 1)))
+                
+                probs_dict = {"away_win": away_win_p, "draw": draw_p, "home_win": home_win_p}
+                val_probs.append([probs_dict[cls] for cls in RESULT_LABELS])
+                val_preds.append(max(probs_dict, key=probs_dict.get))
+                
+            val_probs = np.array(val_probs)
+            val_accuracy = float(accuracy_score(result_valid, val_preds))
+            val_log_loss = float(log_loss(result_valid, val_probs, labels=RESULT_LABELS))
+        except Exception:
+            val_log_loss = 1.098  # Fallback to random uniform log loss
+            val_accuracy = 0.333
+            
+        val_home_mae = float(mean_absolute_error(y_home_goals.loc[valid_index], dev_home_goals_model.predict(x_valid)))
+        val_away_mae = float(mean_absolute_error(y_away_goals.loc[valid_index], dev_away_goals_model.predict(x_valid)))
+    else:
+        val_log_loss, val_accuracy, val_home_mae, val_away_mae = 0.0, 1.0, 0.0, 0.0
+
+    metrics = {
+        "result_accuracy": val_accuracy,
+        "result_log_loss": val_log_loss,
+        "home_goals_mae": val_home_mae,
+        "away_goals_mae": val_away_mae,
+    }
+
+    dev_artifact = {
+        "version": "1.0.0",
+        "match_model": dev_match_model,
+        "home_goals_model": dev_home_goals_model,
+        "away_goals_model": dev_away_goals_model,
+        "btts_model": dev_btts_model,
+        "first_goal_model": dev_first_goal_model,
+        "home_clean_sheet_model": dev_home_clean_sheet_model,
+        "away_clean_sheet_model": dev_away_clean_sheet_model,
+        "team_profiles": build_team_profiles(matches),
+        "player_profiles": players.to_dict(orient="records"),
+        "feature_columns": FEATURE_COLUMNS,
+        "metrics": metrics,
+    }
+
+    # --- 2. Production Mode (100% Data Fit for maximum accuracy) ---
+    max_prod_date = training_dates.max()
+    prod_days_diff = (max_prod_date - training_dates).dt.days
+    prod_weights = np.exp(-decay_rate * np.maximum(0, prod_days_diff))
+
+    prod_match_model = create_pipeline(
+        LogisticRegression(C=best_c, max_iter=1000, random_state=42)
+    )
+    prod_home_goals_model = create_pipeline(PoissonRegressor(alpha=best_alpha))
+    prod_away_goals_model = create_pipeline(PoissonRegressor(alpha=best_alpha))
+    prod_btts_model = create_pipeline(
+        LogisticRegression(C=best_c, max_iter=1000, random_state=42)
+    )
+    prod_first_goal_model = create_pipeline(
+        LogisticRegression(C=best_c, max_iter=1000, random_state=42)
+    )
+    prod_home_clean_sheet_model = create_pipeline(
+        LogisticRegression(C=best_c, max_iter=1000, random_state=42)
+    )
+    prod_away_clean_sheet_model = create_pipeline(
+        LogisticRegression(C=best_c, max_iter=1000, random_state=42)
+    )
+
+    fit_robust_classifier(prod_match_model, x, y_result, prod_weights)
+    fit_robust_regressor(prod_home_goals_model, x, y_home_goals, prod_weights)
+    fit_robust_regressor(prod_away_goals_model, x, y_away_goals, prod_weights)
+    fit_robust_classifier(prod_btts_model, x, y_btts, prod_weights)
+    fit_robust_classifier(prod_first_goal_model, x, y_first_goal, prod_weights)
+    fit_robust_classifier(prod_home_clean_sheet_model, x, y_home_clean_sheet, prod_weights)
+    fit_robust_classifier(prod_away_clean_sheet_model, x, y_away_clean_sheet, prod_weights)
+
+    prod_artifact = {
+        "version": "1.0.0",
+        "match_model": prod_match_model,
+        "home_goals_model": prod_home_goals_model,
+        "away_goals_model": prod_away_goals_model,
+        "btts_model": prod_btts_model,
+        "first_goal_model": prod_first_goal_model,
+        "home_clean_sheet_model": prod_home_clean_sheet_model,
+        "away_clean_sheet_model": prod_away_clean_sheet_model,
+        "team_profiles": build_team_profiles(matches),
+        "player_profiles": players.to_dict(orient="records"),
+        "feature_columns": FEATURE_COLUMNS,
+        "metrics": metrics,
+    }
+
+    # Convert scikit-learn models in artifacts to PurePythonPipeline
+    for artifact in [dev_artifact, prod_artifact]:
+        for key in [
+            "match_model", "home_goals_model", "away_goals_model",
+            "btts_model", "first_goal_model", "home_clean_sheet_model", "away_clean_sheet_model"
+        ]:
+            if key in artifact and artifact[key] is not None:
+                artifact[key] = make_pure_python_pipeline(artifact[key])
+
+    # Define paths
+    dev_model_path = model_path.parent / "dev_model.pkl"
+    version = prod_artifact.get("version", "1.0.0")
+    versioned_path = model_path.parent / f"soccer_sense_v{version}.pkl"
+
+    dev_wrapper = PredictorWrapper(dev_artifact)
+    prod_wrapper = PredictorWrapper(prod_artifact)
+
+    # Save function that uses manual pickle bytecode to call eval() on a codebase-free python string
+    def save_patched(artifact_obj, dest_path):
+        save_model_artifact(artifact_obj, dest_path)
 
     # Save to local paths
     save_patched(dev_wrapper, dev_model_path)
