@@ -759,7 +759,7 @@
                     </div>
 
                     <!-- Downloads Container -->
-                    <div id="downloadContainer" style="display: none; margin-top: 1.5rem; flex-direction: column; gap: 0.75rem;">
+                    <div id="downloadContainer" style="display: flex; margin-top: 1.5rem; flex-direction: column; gap: 0.75rem;">
                         <h3 style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;">📊 Data Downloads</h3>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
                             <a href="/download/matches" class="btn btn-secondary" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); text-decoration: none;" download>
@@ -778,9 +778,17 @@
                             <a href="/download/production_model" class="btn btn-secondary" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); text-decoration: none;" download>
                                 <span>🏆</span> Download Soccer Sense Model (100% Fit)
                             </a>
-                            <a href="/download/production_model_versioned" class="btn btn-secondary" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); text-decoration: none;" download>
+                            <a id="btnDownloadVersioned" href="/download/production_model_versioned" class="btn btn-secondary" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); text-decoration: none;" download>
                                 <span>📦</span> Download Versioned Soccer Sense Model (.pkl)
                             </a>
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-top: 0.25rem; padding: 0.5rem; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 6px;">
+                                <span style="font-size: 0.78rem; color: var(--text-secondary); font-weight: 500;">Model Version:</span>
+                                <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                    <input type="text" id="modelVersionInput" value="1.0.0" style="width: 60px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 4px; padding: 0.2rem 0.4rem; font-size: 0.78rem; text-align: center; font-family: monospace; font-weight: bold;" />
+                                    <button type="button" id="btnIncrementVersion" title="Increment Patch Version" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.08); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold;">+</button>
+                                    <button type="button" id="btnUpdateVersion" style="padding: 0.2rem 0.6rem; background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); border: none; color: white; border-radius: 4px; cursor: pointer; font-size: 0.78rem; font-weight: 600;">Update</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1194,6 +1202,79 @@
         // Initialize
         loadTeams();
 
+        // Load model version on startup
+        async function loadModelVersion() {
+            try {
+                const res = await fetch(`${API_BASE}/model-version`);
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById("modelVersionInput").value = data.version;
+                    updateVersionedDownloadLink(data.version);
+                }
+            } catch (err) {
+                console.error("Failed to load model version:", err);
+            }
+        }
+
+        function updateVersionedDownloadLink(ver) {
+            const link = document.getElementById("btnDownloadVersioned");
+            if (link) {
+                link.innerHTML = `<span>📦</span> Download Versioned Soccer Sense Model (v${ver})`;
+            }
+        }
+
+        // Add version manager event listeners
+        document.getElementById("btnIncrementVersion").addEventListener("click", () => {
+            const input = document.getElementById("modelVersionInput");
+            const parts = input.value.split(".");
+            if (parts.length === 3) {
+                const patch = parseInt(parts[2], 10);
+                if (!isNaN(patch)) {
+                    parts[2] = patch + 1;
+                    input.value = parts.join(".");
+                }
+            } else {
+                input.value = "1.0.1";
+            }
+        });
+
+        document.getElementById("btnUpdateVersion").addEventListener("click", async () => {
+            const versionInput = document.getElementById("modelVersionInput");
+            const version = versionInput.value.trim();
+            if (!version) {
+                alert("Please enter a valid version.");
+                return;
+            }
+            
+            const btn = document.getElementById("btnUpdateVersion");
+            btn.disabled = true;
+            btn.textContent = "Saving...";
+            
+            try {
+                const res = await fetch(`${API_BASE}/update-version`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ version: version })
+                });
+                
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || "Failed to update version");
+                }
+                
+                const data = await res.json();
+                alert(`Model version successfully updated to ${data.version}!`);
+                updateVersionedDownloadLink(data.version);
+            } catch (err) {
+                alert(`Error: ${err.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Update";
+            }
+        });
+
+        loadModelVersion();
+
         // Tab switching for data ingestion (Web Crawler vs File Upload)
         window.switchTab = function(tabName) {
             const tabs = document.querySelectorAll(".tab-content");
@@ -1351,6 +1432,10 @@
                 const data = await res.json();
                 
                 consoleOutput.innerHTML += `> Status: ${data.status}\n`;
+                if (data.version) {
+                    document.getElementById("modelVersionInput").value = data.version;
+                    updateVersionedDownloadLink(data.version);
+                }
                 consoleOutput.innerHTML += `> Uploaded matches count: ${data.uploaded_matches}\n`;
                 consoleOutput.innerHTML += `> Uploaded players count: ${data.uploaded_players}\n`;
                 consoleOutput.innerHTML += `> Models retrained (Dev on 75/25 split, Production on 100% data)!\n`;
@@ -1430,9 +1515,6 @@
                     warningBox.style.display = "none";
                 }
 
-                // Handle Downloads
-                document.getElementById("downloadContainer").style.display = "flex";
-
                 loadTeams();
                 loadTeamProfiles(); // reload data table too
 
@@ -1484,6 +1566,10 @@
                 const data = await res.json();
                 
                 consoleOutput.innerHTML += `> Status: ${data.status}\n`;
+                if (data.version) {
+                    document.getElementById("modelVersionInput").value = data.version;
+                    updateVersionedDownloadLink(data.version);
+                }
                 consoleOutput.innerHTML += `> Scraped matches count: ${data.scraped_matches}\n`;
                 consoleOutput.innerHTML += `> Scraped players count: ${data.scraped_players}\n`;
                 consoleOutput.innerHTML += `> Models retrained (Dev on 75/25 split, Production on 100% data)!\n`;
@@ -1562,9 +1648,6 @@
                 } else {
                     warningBox.style.display = "none";
                 }
-
-                // Handle Downloads
-                document.getElementById("downloadContainer").style.display = "flex";
 
                 loadTeams();
                 loadTeamProfiles(); // reload data table too
@@ -1889,10 +1972,9 @@
                 loadTeams();
                 loadTeamProfiles();
                 
-                // Hide metrics panel, warning box, prediction results, downloads since we reset
+                // Hide metrics panel, warning box, prediction results since we reset
                 document.getElementById("metricsPanel").style.display = "none";
                 document.getElementById("warningBox").style.display = "none";
-                document.getElementById("downloadContainer").style.display = "none";
                 document.getElementById("predictionBox").style.display = "none";
                 document.getElementById("explainContent").style.display = "none";
                 document.getElementById("explainPlaceholder").style.display = "block";
