@@ -1,0 +1,7 @@
+date,home_team,away_team,home_goals,away_goals,first_goal_team,home_elo,away_elo,home_elo_rank,away_elo_rank,competition
+2024-06-01,TestHome,TestAway,2,1,TestHome,1500.0,1500.0,1,3,World Cup
+2024-06-02,TestHome,TestAway2,0,0,,1516.0,1500.0,1,2,World Cup
+2024-06-03,TestAway,TestAway2,1,0,TestAway,1484.0,1500.736306793522,3,2,World Cup
+2024-06-04,TestHome,TestAway,3,1,TestHome,1515.263693206478,1500.7701398146428,1,3,World Cup
+2024-06-05,TestHome,TestAway2,1,0,TestHome,1530.5966273063682,1483.9661669788793,1,2,World Cup
+2024-06-06,TestAway,TestAway2,0,2,TestAway2,1485.4372057147525,1470.1007773481829,3,2,World Cup
