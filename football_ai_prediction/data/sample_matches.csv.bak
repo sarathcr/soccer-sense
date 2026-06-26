@@ -1,0 +1,11 @@
+date,home_team,away_team,home_goals,away_goals,first_goal_team,home_elo,away_elo,home_fifa_rank,away_fifa_rank,home_form_points,away_form_points,home_attack_rating,away_attack_rating,home_defense_rating,away_defense_rating,home_xg_avg,away_xg_avg,home_xga_avg,away_xga_avg,competition
+2024-06-01,TestHome,TestAway,2,1,TestHome,1500,1400,20,30,10,5,80,75,70,65,1.5,1.0,1.0,1.5,World Cup
+2024-06-02,TestHome,TestAway2,0,0,,1500,1450,20,25,10,8,80,78,70,68,1.2,1.1,0.9,1.0,World Cup
+2024-06-03,TestAway,TestAway2,1,0,TestAway,1400,1450,30,25,5,8,75,78,65,68,1.0,1.1,1.5,0.9,World Cup
+2024-06-04,TestHome,TestAway,3,1,TestHome,1500,1400,20,30,10,5,80,75,70,65,1.5,1.0,1.0,1.5,World Cup
+2024-06-05,TestHome,TestAway2,1,0,TestHome,1500,1450,20,25,10,8,80,78,70,68,1.2,1.1,0.9,1.0,World Cup
+2024-06-06,TestAway,TestAway2,0,2,TestAway2,1400,1450,30,25,5,8,75,78,65,68,1.0,1.1,1.5,0.9,World Cup
+2024-06-07,TestHome,TestAway,2,1,TestHome,1500,1400,20,30,10,5,80,75,70,65,1.5,1.0,1.0,1.5,World Cup
+2024-06-08,TestHome,TestAway2,0,0,,1500,1450,20,25,10,8,80,78,70,68,1.2,1.1,0.9,1.0,World Cup
+2024-06-09,TestAway,TestAway2,1,0,TestAway,1400,1450,30,25,5,8,75,78,65,68,1.0,1.1,1.5,0.9,World Cup
+2024-06-10,TestHome,TestAway,3,1,TestHome,1500,1400,20,30,10,5,80,75,70,65,1.5,1.0,1.0,1.5,World Cup

@@ -1,9 +1,28 @@
 import io
+import shutil
+from pathlib import Path
 from fastapi import UploadFile
+import src.football_ai.api as api
+import src.football_ai.train as train
 from src.football_ai.api import train_from_upload, get_teams
 
 
-def test_api_train_from_upload():
+def test_api_train_from_upload(tmp_path, monkeypatch):
+    # Redirect DATA_DIR and MODEL_PATH to a temporary test directory
+    test_data_dir = tmp_path / "data"
+    test_models_dir = tmp_path / "models"
+    test_data_dir.mkdir()
+    test_models_dir.mkdir()
+    
+    project_root = Path(__file__).resolve().parents[1]
+    shutil.copy(project_root / "data" / "sample_matches.csv", test_data_dir / "sample_matches.csv")
+    shutil.copy(project_root / "data" / "sample_players.csv", test_data_dir / "sample_players.csv")
+    
+    monkeypatch.setattr(api, "DATA_DIR", test_data_dir)
+    monkeypatch.setattr(train, "DATA_DIR", test_data_dir)
+    monkeypatch.setattr(api, "MODEL_PATH", test_models_dir / "soccer_sense.pkl")
+    monkeypatch.setattr(train, "MODEL_PATH", test_models_dir / "soccer_sense.pkl")
+
     # Create mock CSV contents
     matches_csv = (
         "date,home_team,away_team,home_goals,away_goals,competition\n"

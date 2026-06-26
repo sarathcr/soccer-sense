@@ -83,6 +83,7 @@ def build_team_profiles(matches: pd.DataFrame) -> dict[str, dict[str, Any]]:
         rows.append(
             matches[
                 [
+                    "date",
                     f"{side}_team",
                     f"{side}_elo",
                     f"{side}_elo_rank",
@@ -97,8 +98,9 @@ def build_team_profiles(matches: pd.DataFrame) -> dict[str, dict[str, Any]]:
         )
 
     all_teams = pd.concat(rows, ignore_index=True)
+    all_teams = all_teams.sort_values("date")
     profiles: dict[str, dict[str, Any]] = {}
-    for team, team_rows in all_teams.groupby("team"):
+    for team, team_rows in all_teams.groupby("team", sort=False):
         latest = team_rows.tail(3).mean(numeric_only=True)
         normalized = normalize_team_name(team)
         profiles[normalized] = {

@@ -58,21 +58,34 @@ def infer_position_from_stats(row: pd.Series | dict) -> str:
         if pos in ["GK", "DF", "MF", "FW"]:
             return pos
 
+    # Prioritize active outfield stats to avoid classifying outfield players with certain names as GK
+    goals = float(row.get("goals", 0.0))
+    shots = float(row.get("shots", 0.0))
+    xg = float(row.get("xg", 0.0))
+    xg_90 = float(row.get("xg_x90", row.get("xg_per_90", 0.0)))
+    shots_90 = float(row.get("shots_x90", row.get("shots_per_90", 0.0)))
+    goals_90 = float(row.get("goals_x90", row.get("goals_per_90", 0.0)))
+
+    if goals > 0 or shots > 0 or xg > 0.01 or xg_90 > 0.01 or shots_90 > 0.1 or goals_90 > 0.01:
+        if xg_90 > 0.25 or shots_90 > 1.5:
+            return "FW"
+        elif xg_90 > 0.08 or shots_90 > 0.6:
+            return "MF"
+        else:
+            return "DF"
+
     # Heuristic based on name
     name_val = row.get("name", "")
     name_lower = normalize_player_name(str(name_val)).lower()
     gk_keywords = [
         "turner", "gunok", "cakir", "bayindir", "horvath", "johnson", "alisson", "ederson", 
         "pickford", "ter stegen", "neuer", "courtois", "oblak", "donnarumma", "sommer", 
-        "martinez", "szczesny", "mignolet", "gk", "goalkeeper"
+        "e. martinez", "emiliano martinez", "e martinez", "szczesny", "mignolet", "gk", "goalkeeper"
     ]
     if any(kw in name_lower for kw in gk_keywords):
         return "GK"
 
-    # Heuristic based on stats
-    xg_90 = float(row.get("xg_x90", row.get("xg_per_90", 0.0)))
-    shots_90 = float(row.get("shots_x90", row.get("shots_per_90", 0.0)))
-
+    # Heuristic based on stats if not matched as GK
     if xg_90 > 0.25 or shots_90 > 1.5:
         return "FW"
     elif xg_90 > 0.08 or shots_90 > 0.6:

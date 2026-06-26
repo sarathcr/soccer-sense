@@ -722,6 +722,12 @@
                         </form>
                     </div>
 
+                    <div style="margin-top: 1.25rem;">
+                        <button id="resetBtn" class="btn btn-secondary" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border: none; color: white; width: 100%; font-weight: 600; padding: 0.65rem;" type="button">
+                            <span>🔄</span> Reset Model & Data to Defaults
+                        </button>
+                    </div>
+
                     <div class="toast" id="trainToast"></div>
                     <div class="console" id="consoleOutput"></div>
 
@@ -1365,6 +1371,7 @@
                 warningsList.innerHTML = "";
                 validationGrid.innerHTML = "";
                 let hasWarnings = false;
+                let hasMissingCols = false;
                 
                 if (data.warnings && data.warnings.length > 0) {
                     data.warnings.forEach(w => {
@@ -1393,14 +1400,32 @@
                             <span style="font-weight: 500;">${col}</span>
                         `;
                         validationGrid.appendChild(item);
+                        if (!present) {
+                            hasMissingCols = true;
+                        }
                     });
-                    hasWarnings = true; // Show warning box to display grid
                 } else {
                     validationGridSection.style.display = "none";
                 }
                 
-                if (hasWarnings) {
+                const showWarningBox = hasWarnings || hasMissingCols || (data.player_validation_status !== null);
+                
+                if (showWarningBox) {
                     warningBox.style.display = "block";
+                    const isScary = hasWarnings || hasMissingCols;
+                    if (isScary) {
+                        warningBox.style.backgroundColor = "rgba(245, 158, 11, 0.12)";
+                        warningBox.style.borderColor = "rgba(245, 158, 11, 0.35)";
+                        warningBox.style.color = "#fbbf24";
+                        warningBox.querySelector("h4").innerHTML = "<span>⚠️</span> Data Validation Warnings";
+                        validationGridSection.style.borderTopColor = "rgba(245, 158, 11, 0.25)";
+                    } else {
+                        warningBox.style.backgroundColor = "rgba(16, 185, 129, 0.12)";
+                        warningBox.style.borderColor = "rgba(16, 185, 129, 0.35)";
+                        warningBox.style.color = "#34d399";
+                        warningBox.querySelector("h4").innerHTML = "<span>✅</span> Player Data Schema Verified";
+                        validationGridSection.style.borderTopColor = "rgba(16, 185, 129, 0.25)";
+                    }
                 } else {
                     warningBox.style.display = "none";
                 }
@@ -1479,6 +1504,7 @@
                 warningsList.innerHTML = "";
                 validationGrid.innerHTML = "";
                 let hasWarnings = false;
+                let hasMissingCols = false;
                 
                 if (data.warnings && data.warnings.length > 0) {
                     data.warnings.forEach(w => {
@@ -1507,14 +1533,32 @@
                             <span style="font-weight: 500;">${col}</span>
                         `;
                         validationGrid.appendChild(item);
+                        if (!present) {
+                            hasMissingCols = true;
+                        }
                     });
-                    hasWarnings = true; // Show warning box to display grid
                 } else {
                     validationGridSection.style.display = "none";
                 }
                 
-                if (hasWarnings) {
+                const showWarningBox = hasWarnings || hasMissingCols || (data.player_validation_status !== null);
+                
+                if (showWarningBox) {
                     warningBox.style.display = "block";
+                    const isScary = hasWarnings || hasMissingCols;
+                    if (isScary) {
+                        warningBox.style.backgroundColor = "rgba(245, 158, 11, 0.12)";
+                        warningBox.style.borderColor = "rgba(245, 158, 11, 0.35)";
+                        warningBox.style.color = "#fbbf24";
+                        warningBox.querySelector("h4").innerHTML = "<span>⚠️</span> Data Validation Warnings";
+                        validationGridSection.style.borderTopColor = "rgba(245, 158, 11, 0.25)";
+                    } else {
+                        warningBox.style.backgroundColor = "rgba(16, 185, 129, 0.12)";
+                        warningBox.style.borderColor = "rgba(16, 185, 129, 0.35)";
+                        warningBox.style.color = "#34d399";
+                        warningBox.querySelector("h4").innerHTML = "<span>✅</span> Player Data Schema Verified";
+                        validationGridSection.style.borderTopColor = "rgba(16, 185, 129, 0.25)";
+                    }
                 } else {
                     warningBox.style.display = "none";
                 }
@@ -1703,25 +1747,44 @@
 
                 labelHomeName.textContent = winProbs.home_team.team;
                 labelAwayName.textContent = winProbs.away_team.team;
-                valHomeProb.textContent = `${homeProb}%`;
-                valDrawProb.textContent = `${drawProb}%`;
-                valAwayProb.textContent = `${awayProb}%`;
+                const formatProb = (p) => p === "Data Unavailable" ? "Data Unavailable" : `${p}%`;
+                valHomeProb.textContent = formatProb(homeProb);
+                valDrawProb.textContent = formatProb(drawProb);
+                valAwayProb.textContent = formatProb(awayProb);
 
                 // Goal insights
-                insightFirstGoal.textContent = `${output.goal_insights.first_team_to_score.team} (${output.goal_insights.first_team_to_score.probability}%)`;
-                insightBtts.textContent = `${output.goal_insights.both_teams_to_score.prediction ? "Yes" : "No"} (${output.goal_insights.both_teams_to_score.probability}%)`;
+                if (output.goal_insights.first_team_to_score.probability === "Data Unavailable") {
+                    insightFirstGoal.textContent = "Data Unavailable";
+                } else {
+                    insightFirstGoal.textContent = `${output.goal_insights.first_team_to_score.team} (${output.goal_insights.first_team_to_score.probability}%)`;
+                }
+
+                if (output.goal_insights.both_teams_to_score.probability === "Data Unavailable") {
+                    insightBtts.textContent = "Data Unavailable";
+                } else {
+                    insightBtts.textContent = `${output.goal_insights.both_teams_to_score.prediction ? "Yes" : "No"} (${output.goal_insights.both_teams_to_score.probability}%)`;
+                }
 
                 // Clean Sheets
                 const homeCS = output.player_prediction.home_team.clean_sheet_prediction;
                 const awayCS = output.player_prediction.away_team.clean_sheet_prediction;
                 homeCleanSheetLabel.textContent = `${winProbs.home_team.team} CS:`;
-                homeCleanSheetProb.textContent = `${homeCS.prediction ? "Yes" : "No"} (${homeCS.probability}%)`;
+                if (homeCS.probability === "Data Unavailable") {
+                    homeCleanSheetProb.textContent = "Data Unavailable";
+                } else {
+                    homeCleanSheetProb.textContent = `${homeCS.prediction ? "Yes" : "No"} (${homeCS.probability}%)`;
+                }
+
                 awayCleanSheetLabel.textContent = `${winProbs.away_team.team} CS:`;
-                awayCleanSheetProb.textContent = `${awayCS.prediction ? "Yes" : "No"} (${awayCS.probability}%)`;
+                if (awayCS.probability === "Data Unavailable") {
+                    awayCleanSheetProb.textContent = "Data Unavailable";
+                } else {
+                    awayCleanSheetProb.textContent = `${awayCS.prediction ? "Yes" : "No"} (${awayCS.probability}%)`;
+                }
 
                 // Home Players Goal Threats
                 homePlayersList.innerHTML = "";
-                const homePlayers = output.player_prediction.home_team.goal || [];
+                const homePlayers = Array.isArray(output.player_prediction.home_team.goal) ? output.player_prediction.home_team.goal : [];
                 if (homePlayers.length === 0) {
                      homePlayersList.innerHTML = "<li>No threat data available</li>";
                 } else {
@@ -1751,7 +1814,7 @@
 
                 // Away Players Goal Threats
                 awayPlayersList.innerHTML = "";
-                const awayPlayers = output.player_prediction.away_team.goal || [];
+                const awayPlayers = Array.isArray(output.player_prediction.away_team.goal) ? output.player_prediction.away_team.goal : [];
                 if (awayPlayers.length === 0) {
                     awayPlayersList.innerHTML = "<li>No threat data available</li>";
                 } else {
@@ -1790,6 +1853,60 @@
             } finally {
                 predictSpinner.style.display = "none";
                 predictForm.querySelector("button").disabled = false;
+            }
+        });
+
+        // Reset Button Handler
+        const resetBtn = document.getElementById("resetBtn");
+        resetBtn.addEventListener("click", async () => {
+            if (!confirm("Are you sure you want to delete all uploaded/crawled team & player records and reset to clean system defaults?")) {
+                return;
+            }
+            
+            resetBtn.disabled = true;
+            resetBtn.innerHTML = "<span>🔄</span> Resetting System...";
+            consoleOutput.style.display = "block";
+            consoleOutput.innerHTML = "> Initiating system reset...\n";
+            trainToast.style.display = "none";
+            
+            try {
+                const res = await fetch(`${API_BASE}/reset`, {
+                    method: "POST"
+                });
+                
+                if (!res.ok) {
+                    const errDetail = await res.json();
+                    throw new Error(errDetail.detail || "Reset failed");
+                }
+                
+                const data = await res.json();
+                consoleOutput.innerHTML += `> Status: ${data.status}\n`;
+                consoleOutput.innerHTML += `> ${data.message}\n`;
+                
+                showToast(trainToast, data.message, "success");
+                
+                // Reload UI elements
+                loadTeams();
+                loadTeamProfiles();
+                
+                // Hide metrics panel, warning box, prediction results, downloads since we reset
+                document.getElementById("metricsPanel").style.display = "none";
+                document.getElementById("warningBox").style.display = "none";
+                document.getElementById("downloadContainer").style.display = "none";
+                document.getElementById("predictionBox").style.display = "none";
+                document.getElementById("explainContent").style.display = "none";
+                document.getElementById("explainPlaceholder").style.display = "block";
+                document.getElementById("btnPageExplain").style.display = "none";
+                
+                // Reset predictForm selection dropdowns
+                document.getElementById("predictForm").reset();
+                
+            } catch (err) {
+                consoleOutput.innerHTML += `> Reset Error: ${err.message}\n`;
+                showToast(trainToast, `Reset failed: ${err.message}`, "error");
+            } finally {
+                resetBtn.disabled = false;
+                resetBtn.innerHTML = "<span>🔄</span> Reset Model & Data to Defaults";
             }
         });
 

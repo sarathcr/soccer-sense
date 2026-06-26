@@ -117,9 +117,9 @@ def train_from_upload(
                 with open(config_path, "r") as f:
                     config = json.load(f)
                     if "matches" in config and "output" in config["matches"]:
-                        matches_out = get_writable_path(project_root / config["matches"]["output"])
+                        matches_out = get_writable_path(DATA_DIR / Path(config["matches"]["output"]).name)
                     if "players" in config and "output" in config["players"]:
-                        players_out = get_writable_path(project_root / config["players"]["output"])
+                        players_out = get_writable_path(DATA_DIR / Path(config["players"]["output"]).name)
             except Exception:
                 pass
 
@@ -168,7 +168,7 @@ def train_from_upload(
             players_arg = players_out if players_out.exists() else (project_root / "data" / "sample_players.csv")
             
         # Train model
-        artifact = train_model(matches_path=matches_arg, players_path=players_arg)
+        artifact = train_model(matches_path=matches_arg, players_path=players_arg, model_path=MODEL_PATH)
         
         # Reload predictor with the new production model
         predictor = FootballPredictor(MODEL_PATH)
@@ -208,9 +208,9 @@ def train_from_url(payload: CrawlTrainInput):
                 with open(config_path, "r") as f:
                     config = json.load(f)
                     if "matches" in config and "output" in config["matches"]:
-                        matches_out = get_writable_path(project_root / config["matches"]["output"])
+                        matches_out = get_writable_path(DATA_DIR / Path(config["matches"]["output"]).name)
                     if "players" in config and "output" in config["players"]:
-                        players_out = get_writable_path(project_root / config["players"]["output"])
+                        players_out = get_writable_path(DATA_DIR / Path(config["players"]["output"]).name)
             except Exception:
                 pass
 
@@ -238,7 +238,7 @@ def train_from_url(payload: CrawlTrainInput):
             players_arg = players_out if players_out.exists() else (project_root / "data" / "sample_players.csv")
             
         # Train model
-        artifact = train_model(matches_path=matches_arg, players_path=players_arg)
+        artifact = train_model(matches_path=matches_arg, players_path=players_arg, model_path=MODEL_PATH)
         
         # Reload predictor with the new production model
         predictor = FootballPredictor(MODEL_PATH)
@@ -265,6 +265,68 @@ def train_from_url(payload: CrawlTrainInput):
             "teams": sorted(list(artifact["team_profiles"].keys())),
             "warnings": warnings,
             "player_validation_status": player_validation_status
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/reset")
+def reset_system() -> dict[str, str]:
+    global predictor
+    try:
+        # Determine output paths
+        project_root = Path(__file__).resolve().parents[2]
+        matches_out = DATA_DIR / "sample_matches.csv"
+        players_out = DATA_DIR / "sample_players.csv"
+        
+        import tempfile
+        tmp_dir = Path(tempfile.gettempdir())
+        
+        # Reset custom files
+        for p, name in [(matches_out, "sample_matches.csv"), (players_out, "sample_players.csv")]:
+            is_tmp = tmp_dir in p.parents or "soccer_sense" in str(p)
+            if is_tmp:
+                if p.exists() and p.is_file():
+                    try:
+                        p.unlink()
+                    except Exception as e:
+                        import logging
+                        logging.warning(f"Could not delete {p}: {e}")
+            else:
+                # Local environment: copy backup over it
+                backup_file = project_root / "data" / f"{name}.bak"
+                if backup_file.exists():
+                    import shutil
+                    shutil.copy2(backup_file, p)
+                    
+        # Deleting custom models in MODEL_PATH if it is writable/temporary
+        is_model_tmp = tmp_dir in MODEL_PATH.parents or "soccer_sense" in str(MODEL_PATH)
+        if is_model_tmp:
+            if MODEL_PATH.exists() and MODEL_PATH.is_file():
+                try:
+                    MODEL_PATH.unlink()
+                except Exception as e:
+                    import logging
+                    logging.warning(f"Could not delete {MODEL_PATH}: {e}")
+                    
+            versioned_path = MODEL_PATH.parent / "soccer_sense_v1.0.0.pkl"
+            if versioned_path.exists():
+                try:
+                    versioned_path.unlink()
+                except Exception:
+                    pass
+                
+        # Retrain model using default packaged data (will auto fall back to backups/packaged files)
+        train_model(matches_path=matches_out, players_path=players_out, model_path=MODEL_PATH)
+        
+        # Reload predictor to pick up the clean default model
+        predictor = FootballPredictor(MODEL_PATH)
+        
+        return {
+            "status": "success",
+            "message": "System data and models successfully reset to clean defaults."
         }
     except Exception as e:
         import traceback
