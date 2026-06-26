@@ -47,6 +47,104 @@ class FootballPredictor:
         import scipy.stats as stats
         home_team = normalize_team_name(home_team)
         away_team = normalize_team_name(away_team)
+
+        # Check if either team is not present in profiles
+        if home_team not in self.artifact.get("team_profiles", {}) or away_team not in self.artifact.get("team_profiles", {}):
+            return {
+                "output": {
+                    "match_prediction": {
+                        "win_probabilities": {
+                            "home_team": {
+                                "team": home_team,
+                                "probability": "Data Unavailable",
+                            },
+                            "draw": {"probability": "Data Unavailable"},
+                            "away_team": {
+                                "team": away_team,
+                                "probability": "Data Unavailable",
+                            },
+                        }
+                    },
+                    "score_prediction": {
+                        "predicted_scoreline": {
+                            "home_team": home_team,
+                            "home_goals": "Data Unavailable",
+                            "away_team": away_team,
+                            "away_goals": "Data Unavailable",
+                        },
+                        "total_goals": "Data Unavailable",
+                    },
+                    "goal_insights": {
+                        "first_team_to_score": {
+                            "team": "Data Unavailable",
+                            "probability": "Data Unavailable",
+                        },
+                        "both_teams_to_score": {
+                            "prediction": "Data Unavailable",
+                            "probability": "Data Unavailable",
+                        },
+                    },
+                    "player_prediction": {
+                        "home_team": {
+                            "team": home_team,
+                            "goal": "Data Unavailable",
+                            "clean_sheet_prediction": {
+                                "goalkeeper": "Data Unavailable",
+                                "prediction": "Data Unavailable",
+                                "probability": "Data Unavailable",
+                            },
+                        },
+                        "away_team": {
+                            "team": away_team,
+                            "goal": "Data Unavailable",
+                            "clean_sheet_prediction": {
+                                "goalkeeper": "Data Unavailable",
+                                "prediction": "Data Unavailable",
+                                "probability": "Data Unavailable",
+                            },
+                        },
+                    },
+                    "explanation_steps": {
+                        "step1_profiles": {
+                            "home": {"team": home_team, "elo": "Data Unavailable", "rank": "Data Unavailable"},
+                            "away": {"team": away_team, "elo": "Data Unavailable", "rank": "Data Unavailable"},
+                            "differences": {"elo_diff": "Data Unavailable", "rank_diff": "Data Unavailable"}
+                        },
+                        "step2_expected_goals": {
+                            "home_lambda": "Data Unavailable",
+                            "away_lambda": "Data Unavailable",
+                            "home_score": "Data Unavailable",
+                            "away_score": "Data Unavailable"
+                        },
+                        "step3_joint_distribution": {
+                            "home_win_raw": "Data Unavailable",
+                            "draw_raw": "Data Unavailable",
+                            "away_win_raw": "Data Unavailable",
+                            "score_matrix_6x6": []
+                        },
+                        "step4_insights_math": {
+                            "btts": {
+                                "formula": "Data Unavailable",
+                                "home_factor": "Data Unavailable",
+                                "away_factor": "Data Unavailable",
+                                "result": "Data Unavailable"
+                            },
+                            "clean_sheets": {
+                                "home_cs_formula": "Data Unavailable",
+                                "home_cs_prob": "Data Unavailable",
+                                "away_cs_formula": "Data Unavailable",
+                                "away_cs_prob": "Data Unavailable"
+                            },
+                            "first_goal": {
+                                "formula": "Data Unavailable",
+                                "home_prob": "Data Unavailable",
+                                "away_prob": "Data Unavailable"
+                            }
+                        }
+                    },
+                }
+            }
+
         features = build_inference_features(
             home_team,
             away_team,
@@ -264,9 +362,16 @@ class FootballPredictor:
             for player in self.artifact.get("player_profiles", [])
             if normalize_player_name(normalize_team_name(player["team"])).lower() == team_norm
         ]
-        if not players:
-            # Generate dummy players so the prediction contract is satisfied
-            players = [
+        def player_rank_key(p):
+            mins = float(p.get("mins", 0))
+            xg_90 = float(p.get("xg_x90", p.get("xg_per_90", 0.0)))
+            shrinkage = mins / (mins + 90.0) if mins > 0 else 0.0
+            return xg_90 * shrinkage
+
+        attackers = [p for p in players if p.get("position") != "GK"]
+        if not attackers:
+            # Generate dummy attackers so the prediction contract is satisfied
+            attackers = [
                 {
                     "team": team,
                     "name": f"{team} Forward 1",
@@ -288,35 +393,27 @@ class FootballPredictor:
                     "assists_per_90": 0.1,
                     "start_probability": 0.8,
                     "mins": 90,
-                },
-                {
-                    "team": team,
-                    "name": f"{team} Goalkeeper",
-                    "position": "GK",
-                    "xg_per_90": 0.0,
-                    "goals_per_90": 0.0,
-                    "xa_per_90": 0.0,
-                    "assists_per_90": 0.0,
-                    "start_probability": 1.0,
-                    "mins": 90,
-                },
+                }
             ]
-            
-        def player_rank_key(p):
-            mins = float(p.get("mins", 0))
-            xg_90 = float(p.get("xg_x90", p.get("xg_per_90", 0.0)))
-            shrinkage = mins / (mins + 90.0) if mins > 0 else 0.0
-            return xg_90 * shrinkage
+        else:
+            attackers = sorted(attackers, key=player_rank_key, reverse=True)[:3]
 
-        attackers = sorted(
-            [player for player in players if player["position"] != "GK"],
-            key=player_rank_key,
-            reverse=True,
-        )[:3]
         goalkeeper = next(
-            (player for player in players if player["position"] == "GK"),
-            {"name": "Unknown Goalkeeper"},
+            (p for p in players if p.get("position") == "GK"),
+            None
         )
+        if goalkeeper is None:
+            goalkeeper = {
+                "team": team,
+                "name": f"{team} Goalkeeper",
+                "position": "GK",
+                "xg_per_90": 0.0,
+                "goals_per_90": 0.0,
+                "xa_per_90": 0.0,
+                "assists_per_90": 0.0,
+                "start_probability": 1.0,
+                "mins": 90,
+            }
 
         return {
             "team": team,
@@ -368,12 +465,7 @@ class FootballPredictor:
             
         return {
             "name": player["name"], 
-            "predictions": predictions,
-            "mins": int(mins),
-            "xg_x90": round(xg_90, 2),
-            "goals_x90": round(goals_90, 2),
-            "sot_x90": round(sot_90, 2),
-            "conv_pct": round(conv_pct, 1)
+            "predictions": predictions
         }
 
     @staticmethod
