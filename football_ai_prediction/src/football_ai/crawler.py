@@ -40,6 +40,184 @@ def clean_column_name(col: str) -> str:
     return col
 
 
+def normalize_player_name(name: str) -> str:
+    """Normalize names by stripping accents and converting to NFKD Unicode."""
+    if not isinstance(name, str):
+        if pd.isna(name):
+            return ""
+        name = str(name)
+    import unicodedata
+    nfkd_form = unicodedata.normalize('NFKD', name)
+    return "".join([c for c in nfkd_form if not unicodedata.combining(c)]).strip()
+
+
+def infer_position_from_stats(row: pd.Series | dict) -> str:
+    """Infer player position based on stats and player name keywords."""
+    if "position" in row and pd.notna(row["position"]) and str(row["position"]).strip():
+        pos = str(row["position"]).strip().upper()
+        if pos in ["GK", "DF", "MF", "FW"]:
+            return pos
+
+    # Heuristic based on name
+    name_val = row.get("name", "")
+    name_lower = normalize_player_name(str(name_val)).lower()
+    gk_keywords = [
+        "turner", "gunok", "cakir", "bayindir", "horvath", "johnson", "alisson", "ederson", 
+        "pickford", "ter stegen", "neuer", "courtois", "oblak", "donnarumma", "sommer", 
+        "martinez", "szczesny", "mignolet", "gk", "goalkeeper"
+    ]
+    if any(kw in name_lower for kw in gk_keywords):
+        return "GK"
+
+    # Heuristic based on stats
+    xg_90 = float(row.get("xg_x90", row.get("xg_per_90", 0.0)))
+    shots_90 = float(row.get("shots_x90", row.get("shots_per_90", 0.0)))
+
+    if xg_90 > 0.25 or shots_90 > 1.5:
+        return "FW"
+    elif xg_90 > 0.08 or shots_90 > 0.6:
+        return "MF"
+    else:
+        return "DF"
+
+
+def validate_and_standardize_players(df: pd.DataFrame) -> tuple[pd.DataFrame, list[str]]:
+    """
+    Standardize a player DataFrame to ensure it conforms to the required 16-column structure.
+    Also performs position inference and fills missing fields with defaults.
+    
+    Required columns to match:
+    - name, nationality, apps, mins, goals, xg, Goals vs xG, shots, sot, conv %, xG per Shot, goals x90, xg x90, Goals vs xG x90, shots x90, sot x90
+    
+    Returns:
+    - Standardized DataFrame
+    - List of missing fields (original user-facing names)
+    """
+    import numpy as np
+    
+    # Required columns with original labels
+    required_labels = {
+        "name": "name",
+        "nationality": "nationality",
+        "apps": "apps",
+        "mins": "mins",
+        "goals": "goals",
+        "xg": "xg",
+        "goals_vs_xg": "Goals vs xG",
+        "shots": "shots",
+        "sot": "sot",
+        "conv_pct": "conv %",
+        "xg_per_shot": "xG per Shot",
+        "goals_x90": "goals x90",
+        "xg_x90": "xg x90",
+        "goals_vs_xg_x90": "Goals vs xG x90",
+        "shots_x90": "shots x90",
+        "sot_x90": "sot x90"
+    }
+
+    # Potential column variants to check (case-insensitive, cleaned check)
+    field_variants = {
+        "name": ["name", "player", "player_name", "fullname"],
+        "nationality": ["nationality", "team", "country", "national_team", "club"],
+        "apps": ["apps", "appearances", "caps", "games", "played"],
+        "mins": ["mins", "minutes", "min", "time_played"],
+        "goals": ["goals", "gls", "goals_scored"],
+        "xg": ["xg", "expected_goals"],
+        "goals_vs_xg": ["goals_vs_xg", "goals_xg_diff", "goals_vs_xg_diff", "goals_xg_difference"],
+        "shots": ["shots", "sh", "total_shots"],
+        "sot": ["sot", "shots_on_target", "ontarget"],
+        "conv_pct": ["conv_pct", "conv_percent", "conv", "conversion_rate", "conv_"],
+        "xg_per_shot": ["xg_per_shot", "xg_shot", "expected_goals_per_shot"],
+        "goals_x90": ["goals_x90", "goals_per_90", "gls_90", "goals_90", "goals_x90"],
+        "xg_x90": ["xg_x90", "xg_per_90", "xg_90", "xg_x90"],
+        "goals_vs_xg_x90": ["goals_vs_xg_x90", "goals_vs_xg_per_90", "goals_vs_xg_90"],
+        "shots_x90": ["shots_x90", "shots_per_90", "shots_90"],
+        "sot_x90": ["sot_x90", "sot_per_90", "sot_90"]
+    }
+
+    cleaned_input_cols = {clean_column_name(c): c for c in df.columns}
+    missing_fields = []
+    standardized = pd.DataFrame()
+
+    for internal_key, variants in field_variants.items():
+        matched_col = None
+        for var in variants:
+            var_cleaned = clean_column_name(var)
+            if var_cleaned in cleaned_input_cols:
+                matched_col = cleaned_input_cols[var_cleaned]
+                break
+
+        # Fallback: look for substring matches
+        if matched_col is None:
+            for col_clean, col_orig in cleaned_input_cols.items():
+                # Avoid cross-matching key absolute metrics with per-90 rates or other suffixes
+                if internal_key in ["goals", "xg", "shots", "sot", "goals_vs_xg"]:
+                    if any(x in col_clean for x in ["90", "per", "vs", "shot"]) and not (internal_key == "goals_vs_xg" and "vs" in col_clean and "90" not in col_clean):
+                        continue
+                if internal_key in ["goals_x90", "xg_x90", "shots_x90", "sot_x90", "goals_vs_xg_x90"]:
+                    if "90" not in col_clean and "per" not in col_clean:
+                        continue
+                if any(v in col_clean for v in variants):
+                    matched_col = col_orig
+                    break
+
+        if matched_col is not None:
+            if internal_key in ["name", "nationality"]:
+                standardized[internal_key] = df[matched_col].astype(str).str.strip()
+            else:
+                # Numeric fields: replace percent signs, commas, etc.
+                s = df[matched_col].astype(str).str.replace("%", "").str.replace(",", "")
+                standardized[internal_key] = pd.to_numeric(s, errors="coerce").fillna(0.0)
+        else:
+            missing_fields.append(required_labels[internal_key])
+            if internal_key in ["name", "nationality"]:
+                standardized[internal_key] = "Unknown"
+            else:
+                standardized[internal_key] = 0.0
+
+    # Ensure clean team names
+    standardized["team"] = standardized["nationality"]
+
+    # Infer position if not explicitly present
+    position_col = next((c for c in df.columns if clean_column_name(c) in ["pos", "position"]), None)
+    if position_col is not None:
+        standardized["position"] = df[position_col].astype(str).str.strip().str.upper()
+    else:
+        # Infer using our heuristic
+        inferred = []
+        for _, row in standardized.iterrows():
+            inferred.append(infer_position_from_stats(row))
+        standardized["position"] = inferred
+
+    # Add backward compatibility fields
+    standardized["xg_per_90"] = standardized["xg_x90"]
+    standardized["goals_per_90"] = standardized["goals_x90"]
+    standardized["xa_per_90"] = df[cleaned_input_cols["xa_per_90"]].astype(float) if "xa_per_90" in cleaned_input_cols else 0.05
+    standardized["assists_per_90"] = df[cleaned_input_cols["assists_per_90"]].astype(float) if "assists_per_90" in cleaned_input_cols else 0.05
+    
+    start_prob_col = next((c for c in df.columns if clean_column_name(c) in ["start_probability", "start_prob", "start"]), None)
+    if start_prob_col is not None:
+        standardized["start_probability"] = pd.to_numeric(df[start_prob_col], errors="coerce").fillna(0.8)
+    else:
+        standardized["start_probability"] = [1.0 if pos == "GK" else 0.8 for pos in standardized["position"]]
+
+    status_col = next((c for c in df.columns if clean_column_name(c) == "status"), None)
+    if status_col is not None:
+        standardized["status"] = df[status_col].astype(str).str.strip()
+    else:
+        standardized["status"] = "active"
+
+    # Rearrange columns logically
+    cols = [
+        "team", "name", "nationality", "position", "apps", "mins", "goals", "xg", "goals_vs_xg", 
+        "shots", "sot", "conv_pct", "xg_per_shot", "goals_x90", "xg_x90", "goals_vs_xg_x90", 
+        "shots_x90", "sot_x90", "xg_per_90", "goals_per_90", "xa_per_90", "assists_per_90", 
+        "start_probability", "status"
+    ]
+    
+    return standardized[cols], missing_fields
+
+
 def parse_score(score_str: str) -> tuple[int, int] | None:
     """Parse score strings like '2-1', '1 - 0', '3 : 0' into home and away goals."""
     if not isinstance(score_str, str):
@@ -305,7 +483,9 @@ def detect_and_parse_players(html_text: str) -> pd.DataFrame:
     if not all_players:
         raise ValueError("Could not find any squad tables or parse player data from URL.")
         
-    return pd.DataFrame(all_players)
+    df_players = pd.DataFrame(all_players)
+    standardized_df, _ = validate_and_standardize_players(df_players)
+    return standardized_df
 
 
 def enrich_match_data(df: pd.DataFrame) -> pd.DataFrame:

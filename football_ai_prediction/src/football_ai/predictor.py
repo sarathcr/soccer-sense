@@ -12,7 +12,15 @@ from .features import build_inference_features, normalize_team_name
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_MODEL_PATH = PROJECT_ROOT / "models" / "production_model.pkl"
+DEFAULT_MODEL_PATH = PROJECT_ROOT / "models" / "soccer_sense.pkl"
+
+
+def normalize_player_name(name: str) -> str:
+    if not isinstance(name, str):
+        return ""
+    import unicodedata
+    nfkd_form = unicodedata.normalize('NFKD', name)
+    return "".join([c for c in nfkd_form if not unicodedata.combining(c)]).strip()
 
 
 class FootballPredictor:
@@ -241,10 +249,11 @@ class FootballPredictor:
         team: str,
         clean_sheet_probability: float,
     ) -> dict[str, Any]:
+        team_norm = normalize_player_name(team).lower()
         players = [
             player
             for player in self.artifact.get("player_profiles", [])
-            if normalize_team_name(player["team"]) == team
+            if normalize_player_name(normalize_team_name(player["team"])).lower() == team_norm
         ]
         if not players:
             # Generate dummy players so the prediction contract is satisfied
@@ -258,6 +267,7 @@ class FootballPredictor:
                     "xa_per_90": 0.2,
                     "assists_per_90": 0.1,
                     "start_probability": 0.9,
+                    "mins": 90,
                 },
                 {
                     "team": team,
@@ -268,6 +278,7 @@ class FootballPredictor:
                     "xa_per_90": 0.1,
                     "assists_per_90": 0.1,
                     "start_probability": 0.8,
+                    "mins": 90,
                 },
                 {
                     "team": team,
@@ -278,18 +289,25 @@ class FootballPredictor:
                     "xa_per_90": 0.0,
                     "assists_per_90": 0.0,
                     "start_probability": 1.0,
+                    "mins": 90,
                 },
             ]
+            
+        def player_rank_key(p):
+            mins = float(p.get("mins", 0))
+            xg_90 = float(p.get("xg_x90", p.get("xg_per_90", 0.0)))
+            shrinkage = mins / (mins + 90.0) if mins > 0 else 0.0
+            return xg_90 * shrinkage
+
         attackers = sorted(
             [player for player in players if player["position"] != "GK"],
-            key=lambda player: (float(player.get("xg_per_90", 0)), float(player.get("goals_per_90", 0))),
+            key=player_rank_key,
             reverse=True,
         )[:3]
         goalkeeper = next(
             (player for player in players if player["position"] == "GK"),
             {"name": "Unknown Goalkeeper"},
         )
-
 
         return {
             "team": team,
@@ -303,13 +321,51 @@ class FootballPredictor:
 
     @staticmethod
     def _goal_prediction(player: dict[str, Any]) -> dict[str, Any]:
-        expected_goals = max(0.05, float(player["xg_per_90"]) * float(player["start_probability"]))
-        one_goal_probability = int(round(min(75, (1 - np.exp(-expected_goals)) * 100)))
-        two_goal_probability = int(round(min(40, one_goal_probability * expected_goals / 2)))
+        mins = float(player.get("mins", 0))
+        xg_90 = float(player.get("xg_x90", player.get("xg_per_90", 0.0)))
+        goals_90 = float(player.get("goals_x90", player.get("goals_per_90", 0.0)))
+        sot_90 = float(player.get("sot_x90", 0.0))
+        conv_pct = float(player.get("conv_pct", 0.0))
+        start_prob = float(player.get("start_probability", 0.8))
+
+        # 1. Bayesian Smoothing (Shrinkage) for low-minute outliers
+        shrinkage = mins / (mins + 90.0) if mins > 0 else 0.0
+        
+        # 2. Blend xG/90 and actual Goals/90 for players with substantial minutes
+        if mins >= 90:
+            weight = min(0.5, mins / 900.0)
+            base_lambda = (1.0 - weight) * xg_90 + weight * goals_90
+            
+            # Incorporate shots on target and conversion
+            if sot_90 > 0 and conv_pct > 0:
+                conv_dec = conv_pct / 100.0 if conv_pct > 1.0 else conv_pct
+                shot_derived = sot_90 * conv_dec
+                base_lambda = 0.7 * base_lambda + 0.3 * shot_derived
+        else:
+            base_lambda = xg_90
+
+        expected_goals = base_lambda * start_prob * shrinkage
+        expected_goals = max(0.01, expected_goals)
+
+        one_goal_probability = int(round(min(85, (1 - np.exp(-expected_goals)) * 100)))
+        two_goal_probability = int(round(min(50, one_goal_probability * expected_goals / 2)))
+        
+        one_goal_probability = max(1, one_goal_probability)
+        two_goal_probability = max(0, two_goal_probability)
+
         predictions = [{"goal_count": 1, "probability": one_goal_probability}]
-        if two_goal_probability >= 10:
+        if two_goal_probability >= 5:
             predictions.append({"goal_count": 2, "probability": two_goal_probability})
-        return {"name": player["name"], "predictions": predictions}
+            
+        return {
+            "name": player["name"], 
+            "predictions": predictions,
+            "mins": int(mins),
+            "xg_x90": round(xg_90, 2),
+            "goals_x90": round(goals_90, 2),
+            "sot_x90": round(sot_90, 2),
+            "conv_pct": round(conv_pct, 1)
+        }
 
     @staticmethod
     def _explanation(

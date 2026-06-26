@@ -7,10 +7,10 @@ from pydantic import BaseModel
 
 from .predictor import FootballPredictor
 from .train import train_model, DATA_DIR, MODEL_PATH
-from .crawler import crawl_and_process, clean_column_name, enrich_match_data
+from .crawler import crawl_and_process, clean_column_name, enrich_match_data, validate_and_standardize_players
 
 
-app = FastAPI(title="Football AI Match Prediction API", version="1.0.0")
+app = FastAPI(title="Soccer Sense Match Prediction API", version="1.0.0")
 predictor = FootballPredictor()
 
 
@@ -50,76 +50,6 @@ def predict_match(payload: MatchInput):
 def get_teams() -> list[str]:
     try:
         return sorted(list(predictor.artifact.get("team_profiles", {}).keys()))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/train-from-url")
-def train_from_url(payload: CrawlTrainInput):
-    global predictor
-    try:
-        # Determine output paths from config, or default
-        project_root = Path(__file__).resolve().parents[2]
-        config_path = project_root / "pipeline_config.json"
-        
-        matches_out = project_root / "data" / "sample_matches.csv"
-        players_out = project_root / "data" / "sample_players.csv"
-        
-        if config_path.exists():
-            try:
-                with open(config_path, "r") as f:
-                    config = json.load(f)
-                    if "matches" in config and "output" in config["matches"]:
-                        matches_out = project_root / config["matches"]["output"]
-                    if "players" in config and "output" in config["players"]:
-                        players_out = project_root / config["players"]["output"]
-            except Exception:
-                pass
-
-        logger_msg = f"Crawling matches={payload.matches_url}, players={payload.players_url}"
-        print(logger_msg)
-        
-        matches_df, players_df = crawl_and_process(
-            payload.matches_url, payload.players_url
-        )
-        
-        # Save to file system so retrained state persists
-        if matches_df is not None and not matches_df.empty:
-            matches_out.parent.mkdir(parents=True, exist_ok=True)
-            matches_df.to_csv(matches_out, index=False)
-            matches_arg = matches_df
-        else:
-            matches_arg = matches_out if matches_out.exists() else None
-            
-        if players_df is not None and not players_df.empty:
-            players_out.parent.mkdir(parents=True, exist_ok=True)
-            players_df.to_csv(players_out, index=False)
-            players_arg = players_df
-        else:
-            players_arg = players_out if players_out.exists() else None
-            
-        # Train model
-        artifact = train_model(matches_path=matches_arg, players_path=players_arg)
-        
-        # Reload predictor with the new model
-        predictor = FootballPredictor(MODEL_PATH)
-        
-        # Check warnings
-        warnings = []
-        if matches_df is not None and not matches_df.empty:
-            warnings.append("Matches: Feature columns (home_elo, away_elo, home_elo_rank, away_elo_rank) were missing from webpage; dynamically generated using matches history.")
-        if players_df is not None and not players_df.empty:
-            warnings.append("Players: Detailed stats (xg_per_90, goals_per_90, start_probability) were missing from webpage; auto-filled with position-appropriate defaults.")
-
-        return {
-            "status": "success",
-            "message": "Model trained and loaded successfully.",
-            "scraped_matches": len(matches_df) if matches_df is not None else 0,
-            "scraped_players": len(players_df) if players_df is not None else 0,
-            "metrics": artifact["metrics"],
-            "teams": sorted(list(artifact["team_profiles"].keys())),
-            "warnings": warnings
-        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -216,25 +146,9 @@ def train_from_upload(
             matches_df = enrich_match_data(raw_matches)
             
         if raw_players is not None and not raw_players.empty:
-            raw_players.columns = [clean_column_name(c) for c in raw_players.columns]
-            players_df = raw_players
-            
-            # Check players missing fields
-            for col in ["team", "name", "position"]:
-                if col not in players_df.columns:
-                    warnings.append(f"Players file: Critical column '{col}' was missing.")
-            
-            # Map required columns or set defaults
-            required_player_cols = ["team", "name", "position", "xg_per_90", "goals_per_90", "xa_per_90", "assists_per_90", "start_probability", "status"]
-            for col in required_player_cols:
-                if col not in players_df.columns:
-                    warnings.append(f"Players file: Feature column '{col}' was missing; auto-filled with position-appropriate defaults.")
-                    if col == "status":
-                        players_df[col] = "active"
-                    elif col == "start_probability":
-                        players_df[col] = 0.8
-                    else:
-                        players_df[col] = 0.0
+            players_df, missing_cols = validate_and_standardize_players(raw_players)
+            if missing_cols:
+                warnings.append(f"Players file: Missing fields required for player-level intelligence: {', '.join(missing_cols)}. Inferred or filled with defaults.")
 
         # Save to file system so state persists and determine paths for training
         if matches_df is not None and not matches_df.empty:
@@ -259,6 +173,9 @@ def train_from_upload(
         # Reload predictor with the new production model
         predictor = FootballPredictor(MODEL_PATH)
         
+        required_labels = ["name", "nationality", "apps", "mins", "goals", "xg", "Goals vs xG", "shots", "sot", "conv %", "xG per Shot", "goals x90", "xg x90", "Goals vs xG x90", "shots x90", "sot x90"]
+        player_validation_status = {col: (col not in missing_cols) for col in required_labels} if raw_players is not None else None
+
         return {
             "status": "success",
             "message": "Model trained and loaded successfully from uploaded files.",
@@ -266,7 +183,8 @@ def train_from_upload(
             "uploaded_players": len(players_df) if players_df is not None else 0,
             "metrics": artifact["metrics"],
             "teams": sorted(list(artifact["team_profiles"].keys())),
-            "warnings": warnings
+            "warnings": warnings,
+            "player_validation_status": player_validation_status
         }
     except Exception as e:
         import traceback
@@ -329,8 +247,14 @@ def train_from_url(payload: CrawlTrainInput):
         warnings = []
         if matches_df is not None and not matches_df.empty:
             warnings.append("Matches: Feature columns (home_elo, away_elo, home_elo_rank, away_elo_rank) were missing from webpage; dynamically generated using matches history.")
+        missing_cols = []
         if players_df is not None and not players_df.empty:
-            warnings.append("Players: Detailed stats (xg_per_90, goals_per_90, start_probability) were missing from webpage; auto-filled with position-appropriate defaults.")
+            _, missing_cols = validate_and_standardize_players(players_df)
+            if missing_cols:
+                warnings.append(f"Players Webpage: Missing fields required for player-level intelligence: {', '.join(missing_cols)}. Inferred or filled with defaults.")
+
+        required_labels = ["name", "nationality", "apps", "mins", "goals", "xg", "Goals vs xG", "shots", "sot", "conv %", "xG per Shot", "goals x90", "xg x90", "Goals vs xG x90", "shots x90", "sot x90"]
+        player_validation_status = {col: (col not in missing_cols) for col in required_labels} if players_df is not None else None
 
         return {
             "status": "success",
@@ -339,7 +263,8 @@ def train_from_url(payload: CrawlTrainInput):
             "scraped_players": len(players_df) if players_df is not None else 0,
             "metrics": artifact["metrics"],
             "teams": sorted(list(artifact["team_profiles"].keys())),
-            "warnings": warnings
+            "warnings": warnings,
+            "player_validation_status": player_validation_status
         }
     except Exception as e:
         import traceback
@@ -403,9 +328,9 @@ def download_dev_model():
 @app.get("/download/production_model")
 def download_production_model():
     project_root = Path(__file__).resolve().parents[2]
-    prod_model = project_root / "models" / "production_model.pkl"
+    prod_model = project_root / "models" / "soccer_sense.pkl"
     if prod_model.exists():
-        return FileResponse(path=prod_model, filename="production_model.pkl", media_type="application/octet-stream")
+        return FileResponse(path=prod_model, filename="soccer_sense.pkl", media_type="application/octet-stream")
     raise HTTPException(status_code=404, detail="Production model file not found.")
 
 
@@ -414,9 +339,9 @@ def download_production_model_versioned():
     try:
         version = predictor.artifact.get("version", "1.0.0")
         project_root = Path(__file__).resolve().parents[2]
-        prod_model_v = project_root / "models" / f"production_model_v{version}.pkl"
+        prod_model_v = project_root / "models" / f"soccer_sense_v{version}.pkl"
         if prod_model_v.exists():
-            return FileResponse(path=prod_model_v, filename=f"production_model_v{version}.pkl", media_type="application/octet-stream")
+            return FileResponse(path=prod_model_v, filename=f"soccer_sense_v{version}.pkl", media_type="application/octet-stream")
     except Exception:
         pass
     raise HTTPException(status_code=404, detail="Versioned production model file not found.")
