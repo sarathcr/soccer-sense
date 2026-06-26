@@ -1,4 +1,2 @@
 team,name,nationality,position,apps,mins,goals,xg,goals_vs_xg,shots,sot,conv_pct,xg_per_shot,goals_x90,xg_x90,goals_vs_xg_x90,shots_x90,sot_x90,xg_per_90,goals_per_90,xa_per_90,assists_per_90,start_probability,status
-TestHome,Player One,TestHome,FW,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.4,0.5,0.0,0.0,0.0,0.5,0.4,0.2,0.1,0.9,active
-TestHome,Player Two,TestHome,GK,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0,active
-TestAway,Player Three,TestAway,FW,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.3,0.4,0.0,0.0,0.0,0.4,0.3,0.1,0.1,0.8,active
+Türkiye,Arda Güler,Türkiye,FW,3,270,0.0,0.0,0.0,12,4,0.0,0.09,0.33,0.35,-0.01,4,0.0,0.35,0.33,0.05,0.05,0.8,active

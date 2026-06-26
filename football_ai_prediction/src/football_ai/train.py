@@ -16,8 +16,29 @@ from .features import FEATURE_COLUMNS, build_team_profiles, build_training_frame
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DATA_DIR = PROJECT_ROOT / "data"
-MODEL_PATH = PROJECT_ROOT / "models" / "soccer_sense.pkl"
+
+def get_writable_path(path: Path | str) -> Path:
+    path = Path(path)
+    parent = path.parent
+    try:
+        parent.mkdir(parents=True, exist_ok=True)
+        test_file = parent / f".write_test_{parent.name}"
+        test_file.touch()
+        test_file.unlink()
+        return path
+    except Exception:
+        import tempfile
+        tmp_dir = Path(tempfile.gettempdir())
+        subfolder = parent.name if parent.name in ["data", "models"] else ""
+        fallback_dir = tmp_dir / "soccer_sense" / subfolder
+        fallback_dir.mkdir(parents=True, exist_ok=True)
+        return fallback_dir / path.name
+
+READ_ONLY_DATA_DIR = PROJECT_ROOT / "data"
+READ_ONLY_MODEL_DIR = PROJECT_ROOT / "models"
+
+DATA_DIR = get_writable_path(PROJECT_ROOT / "data" / "dummy").parent
+MODEL_PATH = get_writable_path(PROJECT_ROOT / "models" / "soccer_sense.pkl")
 
 
 def create_pipeline(estimator) -> Pipeline:
@@ -497,7 +518,12 @@ def train_model(
     else:
         path = Path(matches_path)
         if not path.exists():
-            fallback_path = DATA_DIR / "raw_matches_1.csv"
+            fallback_path = READ_ONLY_DATA_DIR / path.name
+            if not fallback_path.exists():
+                fallback_path = DATA_DIR / "raw_matches_1.csv"
+                if not fallback_path.exists():
+                    fallback_path = READ_ONLY_DATA_DIR / "raw_matches_1.csv"
+            
             if fallback_path.exists():
                 path = fallback_path
             else:
@@ -507,6 +533,8 @@ def train_model(
         # If the loaded matches file is a tiny sample (e.g. from unit tests), and raw_matches_1.csv has more data, fall back to raw_matches_1.csv
         if len(matches) < 10:
             raw_path = DATA_DIR / "raw_matches_1.csv"
+            if not raw_path.exists():
+                raw_path = READ_ONLY_DATA_DIR / "raw_matches_1.csv"
             if raw_path.exists():
                 raw_df = pd.read_csv(raw_path)
                 if len(raw_df) > len(matches):
@@ -516,17 +544,28 @@ def train_model(
         players = players_path
     else:
         path = Path(players_path) if players_path else None
-        if path and path.exists():
-            players = pd.read_csv(path)
-        else:
-            fallback_path = DATA_DIR / "raw_players_1.csv"
-            if fallback_path.exists():
-                players = pd.read_csv(fallback_path)
+        if path:
+            if not path.exists():
+                fallback_path = READ_ONLY_DATA_DIR / path.name
+                if not fallback_path.exists():
+                    fallback_path = DATA_DIR / "raw_players_1.csv"
+                    if not fallback_path.exists():
+                        fallback_path = READ_ONLY_DATA_DIR / "raw_players_1.csv"
+                if fallback_path.exists():
+                    path = fallback_path
+            
+            if path and path.exists():
+                players = pd.read_csv(path)
             else:
                 players = pd.DataFrame(columns=[
                     "team", "name", "position", "xg_per_90", "goals_per_90", 
                     "xa_per_90", "assists_per_90", "start_probability", "status"
                 ])
+        else:
+            players = pd.DataFrame(columns=[
+                "team", "name", "position", "xg_per_90", "goals_per_90", 
+                "xa_per_90", "assists_per_90", "start_probability", "status"
+            ])
 
     # Ensure matches are sorted chronologically by date
     matches = matches.sort_values("date").reset_index(drop=True)

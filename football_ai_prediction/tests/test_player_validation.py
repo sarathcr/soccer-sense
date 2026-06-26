@@ -58,3 +58,22 @@ def test_player_validation_missing_cols():
     assert len(standardized) == 1
     assert standardized.loc[0, "name"] == "Tyler Adams"
     assert standardized.loc[0, "sot_x90"] == 0.0
+
+def test_read_only_fallback(monkeypatch):
+    from pathlib import Path
+    from src.football_ai.train import get_writable_path
+    
+    original_touch = Path.touch
+    
+    def mock_touch(self, *args, **kwargs):
+        if ".write_test" in self.name:
+            raise PermissionError("Read-only file system simulation")
+        return original_touch(self, *args, **kwargs)
+        
+    monkeypatch.setattr(Path, "touch", mock_touch)
+    
+    original_path = Path("/var/task/data/sample_matches.csv")
+    writable_path = get_writable_path(original_path)
+    
+    assert "/var/task" not in str(writable_path.as_posix())
+    assert "soccer_sense" in str(writable_path.as_posix())
