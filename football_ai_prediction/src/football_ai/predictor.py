@@ -26,6 +26,15 @@ def normalize_player_name(name: str) -> str:
 class FootballPredictor:
     def __init__(self, model_path: Path | str = DEFAULT_MODEL_PATH):
         self.model_path = Path(model_path)
+        
+        # Check if we should use the tmp/soccer_sense model if DEFAULT_MODEL_PATH was requested
+        if Path(model_path) == DEFAULT_MODEL_PATH:
+            import tempfile
+            tmp_dir = Path(tempfile.gettempdir())
+            tmp_model_path = tmp_dir / "soccer_sense" / "models" / "soccer_sense.pkl"
+            if tmp_model_path.exists():
+                self.model_path = tmp_model_path
+
         if not self.model_path.exists():
             raise FileNotFoundError(
                 f"Model file not found: {self.model_path}. Run `python3 -m src.football_ai.train` first."

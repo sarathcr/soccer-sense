@@ -6,7 +6,7 @@ from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel
 
 from .predictor import FootballPredictor
-from .train import train_model, DATA_DIR, MODEL_PATH
+from .train import train_model, DATA_DIR, MODEL_PATH, get_writable_path
 from .crawler import crawl_and_process, clean_column_name, enrich_match_data, validate_and_standardize_players
 
 
@@ -109,17 +109,17 @@ def train_from_upload(
         project_root = Path(__file__).resolve().parents[2]
         config_path = project_root / "pipeline_config.json"
         
-        matches_out = project_root / "data" / "sample_matches.csv"
-        players_out = project_root / "data" / "sample_players.csv"
+        matches_out = DATA_DIR / "sample_matches.csv"
+        players_out = DATA_DIR / "sample_players.csv"
         
         if config_path.exists():
             try:
                 with open(config_path, "r") as f:
                     config = json.load(f)
                     if "matches" in config and "output" in config["matches"]:
-                        matches_out = project_root / config["matches"]["output"]
+                        matches_out = get_writable_path(project_root / config["matches"]["output"])
                     if "players" in config and "output" in config["players"]:
-                        players_out = project_root / config["players"]["output"]
+                        players_out = get_writable_path(project_root / config["players"]["output"])
             except Exception:
                 pass
 
@@ -200,17 +200,17 @@ def train_from_url(payload: CrawlTrainInput):
         project_root = Path(__file__).resolve().parents[2]
         config_path = project_root / "pipeline_config.json"
         
-        matches_out = project_root / "data" / "sample_matches.csv"
-        players_out = project_root / "data" / "sample_players.csv"
+        matches_out = DATA_DIR / "sample_matches.csv"
+        players_out = DATA_DIR / "sample_players.csv"
         
         if config_path.exists():
             try:
                 with open(config_path, "r") as f:
                     config = json.load(f)
                     if "matches" in config and "output" in config["matches"]:
-                        matches_out = project_root / config["matches"]["output"]
+                        matches_out = get_writable_path(project_root / config["matches"]["output"])
                     if "players" in config and "output" in config["players"]:
-                        players_out = project_root / config["players"]["output"]
+                        players_out = get_writable_path(project_root / config["players"]["output"])
             except Exception:
                 pass
 
@@ -284,15 +284,17 @@ def get_team_profiles():
 def download_matches():
     project_root = Path(__file__).resolve().parents[2]
     config_path = project_root / "pipeline_config.json"
-    matches_out = project_root / "data" / "sample_matches.csv"
+    matches_out = DATA_DIR / "sample_matches.csv"
     if config_path.exists():
         try:
             with open(config_path, "r") as f:
                 config = json.load(f)
                 if "matches" in config and "output" in config["matches"]:
-                    matches_out = project_root / config["matches"]["output"]
+                    matches_out = get_writable_path(project_root / config["matches"]["output"])
         except Exception:
             pass
+    if not matches_out.exists():
+        matches_out = project_root / "data" / "sample_matches.csv"
     if matches_out.exists():
         return FileResponse(path=matches_out, filename="processed_matches.csv", media_type="text/csv")
     raise HTTPException(status_code=404, detail="Processed matches file not found.")
@@ -302,15 +304,17 @@ def download_matches():
 def download_players():
     project_root = Path(__file__).resolve().parents[2]
     config_path = project_root / "pipeline_config.json"
-    players_out = project_root / "data" / "sample_players.csv"
+    players_out = DATA_DIR / "sample_players.csv"
     if config_path.exists():
         try:
             with open(config_path, "r") as f:
                 config = json.load(f)
                 if "players" in config and "output" in config["players"]:
-                    players_out = project_root / config["players"]["output"]
+                    players_out = get_writable_path(project_root / config["players"]["output"])
         except Exception:
             pass
+    if not players_out.exists():
+        players_out = project_root / "data" / "sample_players.csv"
     if players_out.exists():
         return FileResponse(path=players_out, filename="processed_players.csv", media_type="text/csv")
     raise HTTPException(status_code=404, detail="Processed players file not found.")
@@ -319,7 +323,9 @@ def download_players():
 @app.get("/download/dev_model")
 def download_dev_model():
     project_root = Path(__file__).resolve().parents[2]
-    dev_model = project_root / "models" / "dev_model.pkl"
+    dev_model = DATA_DIR.parent / "models" / "dev_model.pkl"
+    if not dev_model.exists():
+        dev_model = project_root / "models" / "dev_model.pkl"
     if dev_model.exists():
         return FileResponse(path=dev_model, filename="dev_model.pkl", media_type="application/octet-stream")
     raise HTTPException(status_code=404, detail="Dev model file not found.")
@@ -328,7 +334,9 @@ def download_dev_model():
 @app.get("/download/production_model")
 def download_production_model():
     project_root = Path(__file__).resolve().parents[2]
-    prod_model = project_root / "models" / "soccer_sense.pkl"
+    prod_model = MODEL_PATH
+    if not prod_model.exists():
+        prod_model = project_root / "models" / "soccer_sense.pkl"
     if prod_model.exists():
         return FileResponse(path=prod_model, filename="soccer_sense.pkl", media_type="application/octet-stream")
     raise HTTPException(status_code=404, detail="Production model file not found.")
@@ -339,7 +347,9 @@ def download_production_model_versioned():
     try:
         version = predictor.artifact.get("version", "1.0.0")
         project_root = Path(__file__).resolve().parents[2]
-        prod_model_v = project_root / "models" / f"soccer_sense_v{version}.pkl"
+        prod_model_v = MODEL_PATH.parent / f"soccer_sense_v{version}.pkl"
+        if not prod_model_v.exists():
+            prod_model_v = project_root / "models" / f"soccer_sense_v{version}.pkl"
         if prod_model_v.exists():
             return FileResponse(path=prod_model_v, filename=f"soccer_sense_v{version}.pkl", media_type="application/octet-stream")
     except Exception:
