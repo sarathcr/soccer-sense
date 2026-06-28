@@ -1,0 +1,50 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# Installer directories
+pip-wheel-metadata/
+*.egg-info/
+*.eggs/
+
+# Pytest
+.pytest_cache/
+
+# Distribution / packaging
+build/
+dist/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+
+# Python-specific
+*.pyd
+*.pyo
+*.pyd
+
+# Ignore local Python version management files
+.python-version
+
+# Ignore coverage outputs
+.coverage
+htmlcov/
