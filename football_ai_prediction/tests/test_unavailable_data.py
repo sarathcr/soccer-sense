@@ -17,7 +17,6 @@ def test_predictor_unavailable_team():
     assert "score_prediction" in output
     assert "goal_insights" in output
     assert "player_prediction" in output
-    assert "explanation_steps" in output
 
     win_probabilities = output["match_prediction"]["win_probabilities"]
     assert win_probabilities["home_team"]["team"] == "Atlantis"
@@ -52,9 +51,4 @@ def test_predictor_unavailable_team():
     assert player_prediction["away_team"]["clean_sheet_prediction"]["prediction"] == "Data Unavailable"
     assert player_prediction["away_team"]["clean_sheet_prediction"]["probability"] == "Data Unavailable"
 
-    explanation = output["explanation_steps"]
-    assert isinstance(explanation, dict)
-    assert explanation["step1_profiles"]["home"]["elo"] == "Data Unavailable"
-    assert explanation["step2_expected_goals"]["home_lambda"] == "Data Unavailable"
-    assert explanation["step3_joint_distribution"]["home_win_raw"] == "Data Unavailable"
-    assert explanation["step4_insights_math"]["btts"]["result"] == "Data Unavailable"
+

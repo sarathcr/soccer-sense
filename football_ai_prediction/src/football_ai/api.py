@@ -1,7 +1,7 @@
 import io
 import json
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Response
 from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel
 
@@ -45,7 +45,8 @@ def read_root():
 @app.post("/predict")
 def predict_match(payload: MatchInput):
     try:
-        return predictor.predict(payload.home_team, payload.away_team)
+        data = predictor.predict(payload.home_team, payload.away_team)
+        return Response(content=json.dumps(data), media_type="application/json")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -67,7 +68,7 @@ def load_uploaded_file(upload_file: UploadFile) -> pd.DataFrame:
     import pandas as pd
     
     if filename.endswith('.csv'):
-        return pd.read_csv(io.BytesIO(content))
+        return pd.read_csv(io.BytesIO(content), encoding='utf-8-sig', sep=None, engine='python')
     elif filename.endswith(('.xls', '.xlsx')):
         return pd.read_excel(io.BytesIO(content))
     elif filename.endswith('.json'):
@@ -85,16 +86,24 @@ def load_uploaded_files(upload_files: list[UploadFile] | None) -> pd.DataFrame |
         
     import pandas as pd
     dfs = []
-    for uf in upload_files:
-        if not uf.filename:
-            continue
-        try:
-            df = load_uploaded_file(uf)
-            if df is not None and not df.empty:
-                dfs.append(df)
-        except Exception as e:
-            print(f"Error loading uploaded file {uf.filename}: {e}")
-            raise ValueError(f"Failed to parse file {uf.filename}: {str(e)}")
+    
+    debug_log_path = Path(__file__).resolve().parents[2] / "debug_upload.log"
+    with open(debug_log_path, "a", encoding="utf-8") as f:
+        f.write("\n--- Individual Files Columns ---\n")
+        
+        for uf in upload_files:
+            if not uf.filename:
+                continue
+            try:
+                uf.file.seek(0)
+                df = load_uploaded_file(uf)
+                if df is not None and not df.empty:
+                    dfs.append(df)
+                    f.write(f"File: {uf.filename} | Shape: {df.shape} | Columns: {list(df.columns)}\n")
+            except Exception as e:
+                f.write(f"Error reading file {uf.filename}: {e}\n")
+                print(f"Error loading uploaded file {uf.filename}: {e}")
+                raise ValueError(f"Failed to parse file {uf.filename}: {str(e)}")
             
     if not dfs:
         return None
@@ -136,6 +145,23 @@ def train_from_upload(
         matches_df = None
         players_df = None
         
+        # Write debug log of uploaded files and columns
+        try:
+            debug_log_path = Path(__file__).resolve().parents[2] / "debug_upload.log"
+            with open(debug_log_path, "w", encoding="utf-8") as f:
+                f.write("=== Upload Debug ===\n")
+                if matches_files:
+                    f.write(f"Uploaded matches files: {[uf.filename for uf in matches_files]}\n")
+                if players_files:
+                    f.write(f"Uploaded players files: {[uf.filename for uf in players_files]}\n")
+                if raw_matches is not None:
+                    f.write(f"Parsed raw_matches shape: {raw_matches.shape}\n")
+                    f.write(f"Parsed raw_matches columns: {list(raw_matches.columns)}\n")
+                else:
+                    f.write("raw_matches is None\n")
+        except Exception as ex:
+            print(f"Failed to write debug upload log: {ex}")
+        
         if raw_matches is not None and not raw_matches.empty:
             raw_matches.columns = [clean_column_name(c) for c in raw_matches.columns]
             
@@ -143,12 +169,12 @@ def train_from_upload(
             for col in ["home_team", "away_team", "home_goals", "away_goals"]:
                 if col not in raw_matches.columns:
                     warnings.append(f"Matches file: Critical column '{col}' was missing and initialized to defaults.")
-            for col in ["home_elo", "away_elo", "home_elo_rank", "away_elo_rank"]:
-                if col not in raw_matches.columns:
-                    warnings.append(f"Matches file: Feature column '{col}' was missing; dynamically generated using historical records.")
-                    
+
+            # enrich_match_data() preserves ELO columns if present (or aliased) in the upload;
+            # otherwise it computes them automatically from match history — this is normal
+            # expected behaviour for standard match data formats and requires no user action.
             matches_df = enrich_match_data(raw_matches)
-            
+
         if raw_players is not None and not raw_players.empty:
             players_df, missing_cols = validate_and_standardize_players(raw_players)
             if missing_cols:
@@ -157,7 +183,7 @@ def train_from_upload(
         # Save to file system so state persists and determine paths for training
         if matches_df is not None and not matches_df.empty:
             matches_out.parent.mkdir(parents=True, exist_ok=True)
-            matches_df.to_csv(matches_out, index=False)
+            matches_df.to_csv(matches_out, index=False, encoding="utf-8")
             matches_arg = matches_df
         else:
             # Fallback to existing or default sample matches
@@ -165,7 +191,7 @@ def train_from_upload(
             
         if players_df is not None and not players_df.empty:
             players_out.parent.mkdir(parents=True, exist_ok=True)
-            players_df.to_csv(players_out, index=False)
+            players_df.to_csv(players_out, index=False, encoding="utf-8")
             players_arg = players_df
         else:
             # Fallback to existing or default sample players
@@ -230,14 +256,14 @@ def train_from_url(payload: CrawlTrainInput):
         # Save to file system so retrained state persists
         if matches_df is not None and not matches_df.empty:
             matches_out.parent.mkdir(parents=True, exist_ok=True)
-            matches_df.to_csv(matches_out, index=False)
+            matches_df.to_csv(matches_out, index=False, encoding="utf-8")
             matches_arg = matches_df
         else:
             matches_arg = matches_out if matches_out.exists() else (project_root / "data" / "sample_matches.csv")
             
         if players_df is not None and not players_df.empty:
             players_out.parent.mkdir(parents=True, exist_ok=True)
-            players_df.to_csv(players_out, index=False)
+            players_df.to_csv(players_out, index=False, encoding="utf-8")
             players_arg = players_df
         else:
             players_arg = players_out if players_out.exists() else (project_root / "data" / "sample_players.csv")
@@ -251,7 +277,18 @@ def train_from_url(payload: CrawlTrainInput):
         # Check warnings
         warnings = []
         if matches_df is not None and not matches_df.empty:
-            warnings.append("Matches: Feature columns (home_elo, away_elo, home_elo_rank, away_elo_rank) were missing from webpage; dynamically generated using matches history.")
+            # Only warn about ELO if the scraped data did not contain those columns
+            # (enrich_match_data always computes them, so check the enriched result)
+            elo_cols_present = all(
+                col in matches_df.columns
+                and pd.to_numeric(matches_df[col], errors="coerce").notna().any()
+                for col in ("home_elo", "away_elo", "home_elo_rank", "away_elo_rank")
+            )
+            if not elo_cols_present:
+                warnings.append(
+                    "Matches: ELO columns were not available from the source URL; "
+                    "they were dynamically computed from the scraped match history."
+                )
         missing_cols = []
         if players_df is not None and not players_df.empty:
             _, missing_cols = validate_and_standardize_players(players_df)
@@ -460,3 +497,6 @@ def download_production_model_versioned():
     except Exception:
         pass
     raise HTTPException(status_code=404, detail="Versioned production model file not found.")
+
+# Trigger reload: model updated with goalkeeper names
+

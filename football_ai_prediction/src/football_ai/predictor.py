@@ -104,44 +104,6 @@ class FootballPredictor:
                             },
                         },
                     },
-                    "explanation_steps": {
-                        "step1_profiles": {
-                            "home": {"team": home_team, "elo": "Data Unavailable", "rank": "Data Unavailable"},
-                            "away": {"team": away_team, "elo": "Data Unavailable", "rank": "Data Unavailable"},
-                            "differences": {"elo_diff": "Data Unavailable", "rank_diff": "Data Unavailable"}
-                        },
-                        "step2_expected_goals": {
-                            "home_lambda": "Data Unavailable",
-                            "away_lambda": "Data Unavailable",
-                            "home_score": "Data Unavailable",
-                            "away_score": "Data Unavailable"
-                        },
-                        "step3_joint_distribution": {
-                            "home_win_raw": "Data Unavailable",
-                            "draw_raw": "Data Unavailable",
-                            "away_win_raw": "Data Unavailable",
-                            "score_matrix_6x6": []
-                        },
-                        "step4_insights_math": {
-                            "btts": {
-                                "formula": "Data Unavailable",
-                                "home_factor": "Data Unavailable",
-                                "away_factor": "Data Unavailable",
-                                "result": "Data Unavailable"
-                            },
-                            "clean_sheets": {
-                                "home_cs_formula": "Data Unavailable",
-                                "home_cs_prob": "Data Unavailable",
-                                "away_cs_formula": "Data Unavailable",
-                                "away_cs_prob": "Data Unavailable"
-                            },
-                            "first_goal": {
-                                "formula": "Data Unavailable",
-                                "home_prob": "Data Unavailable",
-                                "away_prob": "Data Unavailable"
-                            }
-                        }
-                    },
                 }
             }
 
@@ -178,6 +140,37 @@ class FootballPredictor:
         home_goals_float = (goals_a_as_home + goals_a_as_away) / 2.0
         away_goals_float = (goals_b_as_away + goals_b_as_home) / 2.0
 
+        home_goals_float = max(0.01, home_goals_float)
+        away_goals_float = max(0.01, away_goals_float)
+
+        # ---------------------------------------------------------------
+        # ELO-calibrated strength boost
+        # The Poisson regressor is regularised and regresses predictions
+        # toward the league mean.  For matches with large ELO differentials
+        # (e.g. Brazil 2009 vs a 1500-rated side) we apply a small
+        # multiplicative boost to the stronger team's lambda and a matching
+        # suppression to the weaker team so goal totals feel realistic.
+        #
+        # Calibration: every 400 ELO points of difference → +15 % boost
+        # for the stronger side, −15 % for the weaker side.
+        # Boost is clamped to ×1.75 / ×0.55 to stay sane.
+        # ---------------------------------------------------------------
+        ELO_SCALE = 400.0   # one "standard" ELO unit
+        BOOST_PER_UNIT = 0.15  # 15 % per 400-point gap
+        MAX_BOOST = 1.75
+        MIN_SUPPRESS = 0.55
+
+        elo_diff_raw = elo_diff  # home_elo - away_elo (positive = home stronger)
+        units = elo_diff_raw / ELO_SCALE
+        raw_boost = 1.0 + BOOST_PER_UNIT * units
+
+        home_mult = float(np.clip(raw_boost, MIN_SUPPRESS, MAX_BOOST))
+        away_mult = float(np.clip(2.0 - raw_boost, MIN_SUPPRESS, MAX_BOOST))
+
+        home_goals_float = home_goals_float * home_mult
+        away_goals_float = away_goals_float * away_mult
+
+        # Re-apply floor after boost
         home_goals_float = max(0.01, home_goals_float)
         away_goals_float = max(0.01, away_goals_float)
 
@@ -380,7 +373,7 @@ class FootballPredictor:
             shrinkage = mins / (mins + 90.0) if mins > 0 else 0.0
             return xg_90 * shrinkage
 
-        attackers = [p for p in players if p.get("position") != "GK"]
+        attackers = [p for p in players if p.get("position") not in ["GK", "Goalkeeper", "goalkeeper", "GOALKEEPER"]]
         if not attackers:
             # Generate dummy attackers so the prediction contract is satisfied
             attackers = [
@@ -411,7 +404,7 @@ class FootballPredictor:
             attackers = sorted(attackers, key=player_rank_key, reverse=True)[:3]
 
         goalkeeper = next(
-            (p for p in players if p.get("position") == "GK"),
+            (p for p in players if p.get("position") in ["GK", "Goalkeeper", "goalkeeper", "GOALKEEPER"]),
             None
         )
         if goalkeeper is None:

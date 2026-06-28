@@ -28,7 +28,7 @@ def process_sources(config_section: dict[str, Any]) -> pd.DataFrame:
         
         # Load data based on extension
         if file_path.suffix == '.csv':
-            df = pd.read_csv(file_path)
+            df = pd.read_csv(file_path, encoding="utf-8")
         elif file_path.suffix in ['.xls', '.xlsx']:
             df = pd.read_excel(file_path)
         elif file_path.suffix == '.json':
@@ -83,7 +83,7 @@ def run_pipeline(config_path: Path) -> None:
             out_path = PROJECT_ROOT / config["matches"]["output"]
             out_path.parent.mkdir(parents=True, exist_ok=True)
             # Retain only required columns if possible, but for flexibility we save all
-            matches_df.to_csv(out_path, index=False)
+            matches_df.to_csv(out_path, index=False, encoding="utf-8")
             print(f"Saved match data to {out_path} ({len(matches_df)} rows)")
 
     # Process players
@@ -93,7 +93,7 @@ def run_pipeline(config_path: Path) -> None:
         if not players_df.empty:
             out_path = PROJECT_ROOT / config["players"]["output"]
             out_path.parent.mkdir(parents=True, exist_ok=True)
-            players_df.to_csv(out_path, index=False)
+            players_df.to_csv(out_path, index=False, encoding="utf-8")
             print(f"Saved player data to {out_path} ({len(players_df)} rows)")
 
     # Train model
@@ -127,14 +127,14 @@ def run_crawling_pipeline(
     # Save results to files
     if matches_df is not None and not matches_df.empty:
         matches_out.parent.mkdir(parents=True, exist_ok=True)
-        matches_df.to_csv(matches_out, index=False)
+        matches_df.to_csv(matches_out, index=False, encoding="utf-8")
         print(f"Saved crawled matches to {matches_out} ({len(matches_df)} rows)")
     else:
         matches_df = matches_out if matches_out.exists() else None
         
     if players_df is not None and not players_df.empty:
         players_out.parent.mkdir(parents=True, exist_ok=True)
-        players_df.to_csv(players_out, index=False)
+        players_df.to_csv(players_out, index=False, encoding="utf-8")
         print(f"Saved crawled players to {players_out} ({len(players_df)} rows)")
     else:
         players_df = players_out if players_out.exists() else None

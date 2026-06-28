@@ -190,15 +190,25 @@ def make_pure_python_pipeline(pipeline) -> PurePythonPipeline:
     from sklearn.linear_model import LogisticRegression, PoissonRegressor
     
     if isinstance(model, DummyRegressor):
+        if hasattr(model, "constant_"):
+            constant = model.constant_.tolist() if hasattr(model.constant_, "tolist") else model.constant_
+        else:
+            pred = model.predict(np.array([[0]]))[0]
+            constant = pred.item() if hasattr(pred, "item") else pred
         return PurePythonPipeline({
             "type": "dummy_regressor",
-            "constant": model.constant_.tolist() if hasattr(model.constant_, "tolist") else model.constant_
+            "constant": constant
         })
     elif isinstance(model, DummyClassifier):
+        if hasattr(model, "constant_"):
+            constant = model.constant_.tolist() if hasattr(model.constant_, "tolist") else model.constant_
+        else:
+            pred = model.predict(np.array([[0]]))[0]
+            constant = pred.item() if hasattr(pred, "item") else pred
         return PurePythonPipeline({
             "type": "dummy_classifier",
             "classes": model.classes_.tolist() if hasattr(model.classes_, "tolist") else list(model.classes_),
-            "constant": model.constant_.tolist() if hasattr(model.constant_, "tolist") else model.constant_
+            "constant": constant
         })
     elif isinstance(model, PoissonRegressor):
         return PurePythonPipeline({
@@ -280,7 +290,7 @@ class PredictorWrapper:
                 avg_rank = sum(get_val(p, "elo_rank") for p in self.team_profiles.values()) / len(self.team_profiles)
             else:
                 avg_elo, avg_rank = 1500.0, 50.0
-            home = {"team": h_team, "elo": avg_elo, "elo_rank": avg_rank}
+            home = {"team": h_team, "elo": avg_elo, "elo_rank": avg_rank, "gk_save_ratio": 0.70, "gk_prevented_per_90": 0.0}
         else:
             home = self.team_profiles[h_team]
 
@@ -290,7 +300,7 @@ class PredictorWrapper:
                 avg_rank = sum(get_val(p, "elo_rank") for p in self.team_profiles.values()) / len(self.team_profiles)
             else:
                 avg_elo, avg_rank = 1400.0, 50.0
-            away = {"team": a_team, "elo": avg_elo, "elo_rank": avg_rank}
+            away = {"team": a_team, "elo": avg_elo, "elo_rank": avg_rank, "gk_save_ratio": 0.70, "gk_prevented_per_90": 0.0}
         else:
             away = self.team_profiles[a_team]
 
@@ -299,11 +309,18 @@ class PredictorWrapper:
             "away_elo": get_val(away, "elo"),
             "home_elo_rank": get_val(home, "elo_rank"),
             "away_elo_rank": get_val(away, "elo_rank"),
+            "home_gk_save_ratio": get_val(home, "gk_save_ratio", 0.70),
+            "away_gk_save_ratio": get_val(away, "gk_save_ratio", 0.70),
+            "home_gk_prevented_per_90": get_val(home, "gk_prevented_per_90", 0.0),
+            "away_gk_prevented_per_90": get_val(away, "gk_prevented_per_90", 0.0),
         }])
         frame["elo_diff"] = frame["home_elo"] - frame["away_elo"]
         frame["rank_diff"] = frame["away_elo_rank"] - frame["home_elo_rank"]
 
-        feature_cols = ["home_elo", "away_elo", "home_elo_rank", "away_elo_rank", "elo_diff", "rank_diff"]
+        feature_cols = [
+            "home_elo", "away_elo", "home_elo_rank", "away_elo_rank", "elo_diff", "rank_diff",
+            "home_gk_save_ratio", "away_gk_save_ratio", "home_gk_prevented_per_90", "away_gk_prevented_per_90"
+        ]
         features = frame[feature_cols]
 
         # Neutral venue expected goals averaging (FIFA World Cup)
@@ -312,6 +329,10 @@ class PredictorWrapper:
             "away_elo": get_val(home, "elo"),
             "home_elo_rank": get_val(away, "elo_rank"),
             "away_elo_rank": get_val(home, "elo_rank"),
+            "home_gk_save_ratio": get_val(away, "gk_save_ratio", 0.70),
+            "away_gk_save_ratio": get_val(home, "gk_save_ratio", 0.70),
+            "home_gk_prevented_per_90": get_val(away, "gk_prevented_per_90", 0.0),
+            "away_gk_prevented_per_90": get_val(home, "gk_prevented_per_90", 0.0),
         }])
         frame_swapped["elo_diff"] = frame_swapped["home_elo"] - frame_swapped["away_elo"]
         frame_swapped["rank_diff"] = frame_swapped["away_elo_rank"] - frame_swapped["home_elo_rank"]
@@ -327,6 +348,28 @@ class PredictorWrapper:
 
         home_goals_float = max(0.01, home_goals_float)
         away_goals_float = max(0.01, away_goals_float)
+
+        # ---------------------------------------------------------------
+        # ELO-calibrated strength boost (mirrors FootballPredictor.predict)
+        # Every 400 ELO points of difference → +15% boost for the stronger
+        # side and -15% suppression for the weaker side.
+        # Clamped to x1.75 / x0.55 to remain realistic.
+        # ---------------------------------------------------------------
+        elo_diff = get_val(home, "elo") - get_val(away, "elo")
+        ELO_SCALE = 400.0
+        BOOST_PER_UNIT = 0.15
+        MAX_BOOST = 1.75
+        MIN_SUPPRESS = 0.55
+
+        units = elo_diff / ELO_SCALE
+        raw_boost = 1.0 + BOOST_PER_UNIT * units
+
+        home_mult = float(np.clip(raw_boost, MIN_SUPPRESS, MAX_BOOST))
+        away_mult = float(np.clip(2.0 - raw_boost, MIN_SUPPRESS, MAX_BOOST))
+
+        home_goals_float = max(0.01, home_goals_float * home_mult)
+        away_goals_float = max(0.01, away_goals_float * away_mult)
+
 
         max_poisson = 15
         h_pmf = stats.poisson.pmf(np.arange(max_poisson), home_goals_float)
@@ -459,12 +502,12 @@ class PredictorWrapper:
                 return xg_90 * shrinkage
 
             attackers = sorted(
-                [p for p in players if p["position"] != "GK"],
+                [p for p in players if p.get("position") not in ["GK", "Goalkeeper", "goalkeeper", "GOALKEEPER"]],
                 key=player_rank_key,
                 reverse=True,
             )[:3]
             goalkeeper = next(
-                (p for p in players if p["position"] == "GK"),
+                (p for p in players if p.get("position") in ["GK", "Goalkeeper", "goalkeeper", "GOALKEEPER"]),
                 {"name": "Unknown Goalkeeper"},
             )
             return {
@@ -761,44 +804,6 @@ class PredictorWrapper:
                             }},
                         }},
                     }},
-                    "explanation_steps": {{
-                        "step1_profiles": {{
-                            "home": {{"team": h_team, "elo": "Data Unavailable", "rank": "Data Unavailable"}},
-                            "away": {{"team": a_team, "elo": "Data Unavailable", "rank": "Data Unavailable"}},
-                            "differences": {{"elo_diff": "Data Unavailable", "rank_diff": "Data Unavailable"}}
-                        }},
-                        "step2_expected_goals": {{
-                            "home_lambda": "Data Unavailable",
-                            "away_lambda": "Data Unavailable",
-                            "home_score": "Data Unavailable",
-                            "away_score": "Data Unavailable"
-                        }},
-                        "step3_joint_distribution": {{
-                            "home_win_raw": "Data Unavailable",
-                            "draw_raw": "Data Unavailable",
-                            "away_win_raw": "Data Unavailable",
-                            "score_matrix_6x6": []
-                        }},
-                        "step4_insights_math": {{
-                            "btts": {{
-                                "formula": "Data Unavailable",
-                                "home_factor": "Data Unavailable",
-                                "away_factor": "Data Unavailable",
-                                "result": "Data Unavailable"
-                            }},
-                            "clean_sheets": {{
-                                "home_cs_formula": "Data Unavailable",
-                                "home_cs_prob": "Data Unavailable",
-                                "away_cs_formula": "Data Unavailable",
-                                "away_cs_prob": "Data Unavailable"
-                            }},
-                            "first_goal": {{
-                                "formula": "Data Unavailable",
-                                "home_prob": "Data Unavailable",
-                                "away_prob": "Data Unavailable"
-                            }}
-                        }}
-                    }}
                 }}
             }}
 
@@ -813,7 +818,7 @@ class PredictorWrapper:
                 avg_rank = sum(get_val(p, "elo_rank") for p in self.team_profiles.values()) / len(self.team_profiles)
             else:
                 avg_elo, avg_rank = 1500.0, 50.0
-            home = {{"team": h_team, "elo": avg_elo, "elo_rank": avg_rank}}
+            home = {{"team": h_team, "elo": avg_elo, "elo_rank": avg_rank, "gk_save_ratio": 0.70, "gk_prevented_per_90": 0.0}}
         else:
             home = self.team_profiles[h_team]
 
@@ -823,7 +828,7 @@ class PredictorWrapper:
                 avg_rank = sum(get_val(p, "elo_rank") for p in self.team_profiles.values()) / len(self.team_profiles)
             else:
                 avg_elo, avg_rank = 1400.0, 50.0
-            away = {{"team": a_team, "elo": avg_elo, "elo_rank": avg_rank}}
+            away = {{"team": a_team, "elo": avg_elo, "elo_rank": avg_rank, "gk_save_ratio": 0.70, "gk_prevented_per_90": 0.0}}
         else:
             away = self.team_profiles[a_team]
 
@@ -832,11 +837,18 @@ class PredictorWrapper:
             "away_elo": get_val(away, "elo"),
             "home_elo_rank": get_val(home, "elo_rank"),
             "away_elo_rank": get_val(away, "elo_rank"),
+            "home_gk_save_ratio": get_val(home, "gk_save_ratio", 0.70),
+            "away_gk_save_ratio": get_val(away, "gk_save_ratio", 0.70),
+            "home_gk_prevented_per_90": get_val(home, "gk_prevented_per_90", 0.0),
+            "away_gk_prevented_per_90": get_val(away, "gk_prevented_per_90", 0.0),
         }}])
         frame["elo_diff"] = frame["home_elo"] - frame["away_elo"]
         frame["rank_diff"] = frame["away_elo_rank"] - frame["home_elo_rank"]
 
-        feature_cols = ["home_elo", "away_elo", "home_elo_rank", "away_elo_rank", "elo_diff", "rank_diff"]
+        feature_cols = [
+            "home_elo", "away_elo", "home_elo_rank", "away_elo_rank", "elo_diff", "rank_diff",
+            "home_gk_save_ratio", "away_gk_save_ratio", "home_gk_prevented_per_90", "away_gk_prevented_per_90"
+        ]
         features = frame[feature_cols]
 
         # Neutral venue expected goals averaging (FIFA World Cup)
@@ -845,6 +857,10 @@ class PredictorWrapper:
             "away_elo": get_val(home, "elo"),
             "home_elo_rank": get_val(away, "elo_rank"),
             "away_elo_rank": get_val(home, "elo_rank"),
+            "home_gk_save_ratio": get_val(away, "gk_save_ratio", 0.70),
+            "away_gk_save_ratio": get_val(home, "gk_save_ratio", 0.70),
+            "home_gk_prevented_per_90": get_val(away, "gk_prevented_per_90", 0.0),
+            "away_gk_prevented_per_90": get_val(home, "gk_prevented_per_90", 0.0),
         }}])
         frame_swapped["elo_diff"] = frame_swapped["home_elo"] - frame_swapped["away_elo"]
         frame_swapped["rank_diff"] = frame_swapped["away_elo_rank"] - frame_swapped["home_elo_rank"]
@@ -985,7 +1001,7 @@ class PredictorWrapper:
                 shrinkage = mins / (mins + 90.0) if mins > 0 else 0.0
                 return xg_90 * shrinkage
 
-            attackers = [p for p in players if p.get("position") != "GK"]
+            attackers = [p for p in players if p.get("position") not in ["GK", "Goalkeeper", "goalkeeper", "GOALKEEPER"]]
             if not attackers:
                 # Generate dummy attackers so the prediction contract is satisfied
                 attackers = [
@@ -996,7 +1012,7 @@ class PredictorWrapper:
                 attackers = sorted(attackers, key=player_rank_key, reverse=True)[:3]
 
             goalkeeper = next(
-                (p for p in players if p.get("position") == "GK"),
+                (p for p in players if p.get("position") in ["GK", "Goalkeeper", "goalkeeper", "GOALKEEPER"]),
                 None
             )
             if goalkeeper is None:
@@ -1126,7 +1142,7 @@ def train_model(
                 path = fallback_path
             else:
                 raise FileNotFoundError(f"Matches data not found at {path} or fallback {fallback_path}")
-        matches = pd.read_csv(path)
+        matches = pd.read_csv(path, encoding="utf-8")
         
         # If the loaded matches file is a tiny sample (e.g. from unit tests) or is missing required ELO/rank columns, and raw_matches_1.csv has more data, fall back to raw_matches_1.csv
         has_required_cols = all(c in matches.columns for c in ["home_elo", "away_elo", "home_elo_rank", "away_elo_rank"])
@@ -1135,7 +1151,7 @@ def train_model(
             if not raw_path.exists():
                 raw_path = READ_ONLY_DATA_DIR / "raw_matches_1.csv"
             if raw_path.exists():
-                raw_df = pd.read_csv(raw_path)
+                raw_df = pd.read_csv(raw_path, encoding="utf-8")
                 if len(raw_df) > len(matches):
                     matches = raw_df
 
@@ -1154,7 +1170,7 @@ def train_model(
                     path = fallback_path
             
             if path and path.exists():
-                players = pd.read_csv(path)
+                players = pd.read_csv(path, encoding="utf-8")
             else:
                 players = pd.DataFrame(columns=[
                     "team", "name", "position", "xg_per_90", "goals_per_90", 
@@ -1166,9 +1182,13 @@ def train_model(
                 "xa_per_90", "assists_per_90", "start_probability", "status"
             ])
 
+    from .crawler import validate_and_standardize_players
+    players, _ = validate_and_standardize_players(players)
+
     # Ensure matches are sorted chronologically by date
     matches = matches.sort_values("date").reset_index(drop=True)
-    training = build_training_frame(matches)
+    team_profiles = build_team_profiles(matches, players)
+    training = build_training_frame(matches, team_profiles)
 
     x = training[FEATURE_COLUMNS]
     y_result = training["result"]
@@ -1200,45 +1220,74 @@ def train_model(
     train_days_diff = (max_train_date - training_dates.iloc[:split_idx]).dt.days
     train_weights = np.exp(-decay_rate * np.maximum(0, train_days_diff))
 
-    # Grid search for optimal hyperparameters to maximize accuracy
+    # Grid search for optimal hyperparameters
+    # For large datasets (>5k rows) we use a smaller grid on a sample for speed.
+    # For very large datasets (>15k rows) we skip and use robust defaults.
     best_c = 0.1
     best_alpha = 1.0
     best_score = -1.0
     best_loss = 999.0
 
-    if not x_valid.empty:
-        for c in [0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0]:
-            for alpha in [0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0]:
-                test_match_model = create_pipeline(LogisticRegression(C=c, max_iter=1000, random_state=42))
-                test_home = create_pipeline(PoissonRegressor(alpha=alpha))
-                test_away = create_pipeline(PoissonRegressor(alpha=alpha))
+    n_train = len(x_train)
+    SKIP_GRID_THRESHOLD = 15000   # rows: skip grid entirely
+    SAMPLE_GRID_THRESHOLD = 5000  # rows: use 3x3 grid on a sample
+    SAMPLE_CAP = 5000             # max rows used per model fit during search
 
-                fit_robust_classifier(test_match_model, x_train, result_train, train_weights)
-                fit_robust_regressor(test_home, x_train, y_home_goals.loc[train_index], train_weights)
-                fit_robust_regressor(test_away, x_train, y_away_goals.loc[train_index], train_weights)
+    if not x_valid.empty and n_train < SKIP_GRID_THRESHOLD:
+        # Choose grid size based on dataset size
+        if n_train >= SAMPLE_GRID_THRESHOLD:
+            c_grid = [0.1, 1.0, 5.0]
+            alpha_grid = [0.1, 1.0, 5.0]
+            # Sample a subset for faster fitting during search
+            sample_idx = np.random.RandomState(42).choice(n_train, size=min(SAMPLE_CAP, n_train), replace=False)
+            sample_idx = np.sort(sample_idx)
+            x_gs = x_train.iloc[sample_idx]
+            res_gs = result_train.iloc[sample_idx]
+            wts_gs = train_weights[sample_idx]
+            yh_gs = y_home_goals.loc[x_gs.index]
+            ya_gs = y_away_goals.loc[x_gs.index]
+        else:
+            c_grid = [0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0]
+            alpha_grid = [0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0]
+            x_gs, res_gs, wts_gs = x_train, result_train, train_weights
+            yh_gs = y_home_goals.loc[train_index]
+            ya_gs = y_away_goals.loc[train_index]
+
+        for c in c_grid:
+            for alpha in alpha_grid:
+                test_match_model = create_pipeline(LogisticRegression(C=c, max_iter=500, random_state=42))
+                test_home = create_pipeline(PoissonRegressor(alpha=alpha, max_iter=300))
+                test_away = create_pipeline(PoissonRegressor(alpha=alpha, max_iter=300))
+
+                fit_robust_classifier(test_match_model, x_gs, res_gs, wts_gs)
+                fit_robust_regressor(test_home, x_gs, yh_gs, wts_gs)
+                fit_robust_regressor(test_away, x_gs, ya_gs, wts_gs)
 
                 try:
                     val_home_preds = test_home.predict(x_valid)
                     val_away_preds = test_away.predict(x_valid)
 
-                    val_probs = []
-                    val_preds = []
-                    for h_lam, a_lam in zip(val_home_preds, val_away_preds):
-                        h_pmf = stats.poisson.pmf(np.arange(15), h_lam)
-                        a_pmf = stats.poisson.pmf(np.arange(15), a_lam)
-                        h_pmf /= h_pmf.sum()
-                        a_pmf /= a_pmf.sum()
-                        joint = np.outer(h_pmf, a_pmf)
+                    h_pmf = stats.poisson.pmf(np.arange(15)[:, None], val_home_preds[None, :])
+                    a_pmf = stats.poisson.pmf(np.arange(15)[:, None], val_away_preds[None, :])
+                    
+                    # Normalize PMFs to sum to 1.0
+                    h_pmf /= np.maximum(h_pmf.sum(axis=0), 1e-12)
+                    a_pmf /= np.maximum(a_pmf.sum(axis=0), 1e-12)
 
-                        draw_p = float(np.trace(joint))
-                        home_win_p = float(np.sum(np.tril(joint, -1)))
-                        away_win_p = float(np.sum(np.triu(joint, 1)))
+                    draw_p = np.sum(h_pmf * a_pmf, axis=0)
+                    H_cumsum = np.cumsum(h_pmf[::-1, :], axis=0)[::-1, :]
+                    H_gt_A = np.zeros_like(h_pmf)
+                    H_gt_A[:-1, :] = H_cumsum[1:, :]
+                    home_win_p = np.sum(a_pmf * H_gt_A, axis=0)
+                    away_win_p = np.maximum(0.0, 1.0 - draw_p - home_win_p)
 
-                        probs_dict = {"away_win": away_win_p, "draw": draw_p, "home_win": home_win_p}
-                        val_probs.append([probs_dict[cls] for cls in RESULT_LABELS])
-                        val_preds.append(max(probs_dict, key=probs_dict.get))
+                    # Build val_probs mapping to RESULT_LABELS = ["away_win", "draw", "home_win"]
+                    val_probs = np.column_stack([away_win_p, draw_p, home_win_p])
+                    val_probs /= np.maximum(val_probs.sum(axis=1, keepdims=True), 1e-12)
 
-                    val_probs = np.array(val_probs)
+                    pred_indices = np.argmax(val_probs, axis=1)
+                    val_preds = [RESULT_LABELS[idx] for idx in pred_indices]
+
                     val_accuracy = float(accuracy_score(result_valid, val_preds))
                     val_log_loss = float(log_loss(result_valid, val_probs, labels=RESULT_LABELS))
 
@@ -1249,6 +1298,8 @@ def train_model(
                         best_alpha = alpha
                 except Exception:
                     pass
+    else:
+        print(f"Dataset large ({n_train} training rows) — skipping grid search, using default hyperparameters.")
 
     print(f"Optimal parameters selected: LogisticRegression C={best_c}, PoissonRegressor alpha={best_alpha} (Validation Accuracy: {best_score:.3f})")
 
@@ -1270,14 +1321,39 @@ def train_model(
         LogisticRegression(C=best_c, max_iter=1000, random_state=42)
     )
 
+    # For very large datasets, cap final model fits to the most-recent
+    # PROD_FIT_CAP rows (data is sorted chronologically so tail = newest).
+    PROD_FIT_CAP = 10_000
+    if len(x_train) > PROD_FIT_CAP:
+        x_train_fit = x_train.tail(PROD_FIT_CAP)
+        result_train_fit = result_train.loc[x_train_fit.index]
+        train_weights_fit = train_weights[-PROD_FIT_CAP:]
+        yh_train_fit = y_home_goals.loc[x_train_fit.index]
+        ya_train_fit = y_away_goals.loc[x_train_fit.index]
+        yb_train_fit = y_btts.loc[x_train_fit.index]
+        yf_train_fit = y_first_goal.loc[x_train_fit.index]
+        yhcs_train_fit = y_home_clean_sheet.loc[x_train_fit.index]
+        yacs_train_fit = y_away_clean_sheet.loc[x_train_fit.index]
+        print(f"Large dataset: capping dev model fits to {PROD_FIT_CAP} most-recent rows.")
+    else:
+        x_train_fit = x_train
+        result_train_fit = result_train
+        train_weights_fit = train_weights
+        yh_train_fit = y_home_goals.loc[train_index]
+        ya_train_fit = y_away_goals.loc[train_index]
+        yb_train_fit = y_btts.loc[train_index]
+        yf_train_fit = y_first_goal.loc[train_index]
+        yhcs_train_fit = y_home_clean_sheet.loc[train_index]
+        yacs_train_fit = y_away_clean_sheet.loc[train_index]
+
     # Fit dev models
-    fit_robust_classifier(dev_match_model, x_train, result_train, train_weights)
-    fit_robust_regressor(dev_home_goals_model, x_train, y_home_goals.loc[train_index], train_weights)
-    fit_robust_regressor(dev_away_goals_model, x_train, y_away_goals.loc[train_index], train_weights)
-    fit_robust_classifier(dev_btts_model, x_train, y_btts.loc[train_index], train_weights)
-    fit_robust_classifier(dev_first_goal_model, x_train, y_first_goal.loc[train_index], train_weights)
-    fit_robust_classifier(dev_home_clean_sheet_model, x_train, y_home_clean_sheet.loc[train_index], train_weights)
-    fit_robust_classifier(dev_away_clean_sheet_model, x_train, y_away_clean_sheet.loc[train_index], train_weights)
+    fit_robust_classifier(dev_match_model, x_train_fit, result_train_fit, train_weights_fit)
+    fit_robust_regressor(dev_home_goals_model, x_train_fit, yh_train_fit, train_weights_fit)
+    fit_robust_regressor(dev_away_goals_model, x_train_fit, ya_train_fit, train_weights_fit)
+    fit_robust_classifier(dev_btts_model, x_train_fit, yb_train_fit, train_weights_fit)
+    fit_robust_classifier(dev_first_goal_model, x_train_fit, yf_train_fit, train_weights_fit)
+    fit_robust_classifier(dev_home_clean_sheet_model, x_train_fit, yhcs_train_fit, train_weights_fit)
+    fit_robust_classifier(dev_away_clean_sheet_model, x_train_fit, yacs_train_fit, train_weights_fit)
 
     # Metrics evaluation
     if not x_valid.empty:
@@ -1331,7 +1407,7 @@ def train_model(
         "first_goal_model": dev_first_goal_model,
         "home_clean_sheet_model": dev_home_clean_sheet_model,
         "away_clean_sheet_model": dev_away_clean_sheet_model,
-        "team_profiles": build_team_profiles(matches),
+        "team_profiles": build_team_profiles(matches, players),
         "player_profiles": players.to_dict(orient="records"),
         "feature_columns": FEATURE_COLUMNS,
         "metrics": metrics,
@@ -1360,13 +1436,36 @@ def train_model(
         LogisticRegression(C=best_c, max_iter=1000, random_state=42)
     )
 
-    fit_robust_classifier(prod_match_model, x, y_result, prod_weights)
-    fit_robust_regressor(prod_home_goals_model, x, y_home_goals, prod_weights)
-    fit_robust_regressor(prod_away_goals_model, x, y_away_goals, prod_weights)
-    fit_robust_classifier(prod_btts_model, x, y_btts, prod_weights)
-    fit_robust_classifier(prod_first_goal_model, x, y_first_goal, prod_weights)
-    fit_robust_classifier(prod_home_clean_sheet_model, x, y_home_clean_sheet, prod_weights)
-    fit_robust_classifier(prod_away_clean_sheet_model, x, y_away_clean_sheet, prod_weights)
+    # For very large datasets, cap production fit to recent rows too
+    if len(x) > PROD_FIT_CAP:
+        x_prod = x.tail(PROD_FIT_CAP)
+        y_result_prod = y_result.loc[x_prod.index]
+        y_hg_prod = y_home_goals.loc[x_prod.index]
+        y_ag_prod = y_away_goals.loc[x_prod.index]
+        y_bt_prod = y_btts.loc[x_prod.index]
+        y_fg_prod = y_first_goal.loc[x_prod.index]
+        y_hcs_prod = y_home_clean_sheet.loc[x_prod.index]
+        y_acs_prod = y_away_clean_sheet.loc[x_prod.index]
+        prod_weights_cap = prod_weights[-PROD_FIT_CAP:]
+        print(f"Large dataset: capping prod model fits to {PROD_FIT_CAP} most-recent rows.")
+    else:
+        x_prod = x
+        y_result_prod = y_result
+        y_hg_prod = y_home_goals
+        y_ag_prod = y_away_goals
+        y_bt_prod = y_btts
+        y_fg_prod = y_first_goal
+        y_hcs_prod = y_home_clean_sheet
+        y_acs_prod = y_away_clean_sheet
+        prod_weights_cap = prod_weights
+
+    fit_robust_classifier(prod_match_model, x_prod, y_result_prod, prod_weights_cap)
+    fit_robust_regressor(prod_home_goals_model, x_prod, y_hg_prod, prod_weights_cap)
+    fit_robust_regressor(prod_away_goals_model, x_prod, y_ag_prod, prod_weights_cap)
+    fit_robust_classifier(prod_btts_model, x_prod, y_bt_prod, prod_weights_cap)
+    fit_robust_classifier(prod_first_goal_model, x_prod, y_fg_prod, prod_weights_cap)
+    fit_robust_classifier(prod_home_clean_sheet_model, x_prod, y_hcs_prod, prod_weights_cap)
+    fit_robust_classifier(prod_away_clean_sheet_model, x_prod, y_acs_prod, prod_weights_cap)
 
     prod_artifact = {
         "version": "1.0.0",
@@ -1377,7 +1476,7 @@ def train_model(
         "first_goal_model": prod_first_goal_model,
         "home_clean_sheet_model": prod_home_clean_sheet_model,
         "away_clean_sheet_model": prod_away_clean_sheet_model,
-        "team_profiles": build_team_profiles(matches),
+        "team_profiles": build_team_profiles(matches, players),
         "player_profiles": players.to_dict(orient="records"),
         "feature_columns": FEATURE_COLUMNS,
         "metrics": metrics,

@@ -919,6 +919,17 @@
                             </button>
                         </div>
 
+                        <!-- Raw JSON Viewer -->
+                        <div style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1.5rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                <h3 class="insight-title" style="margin: 0; color: var(--text-primary);">📋 Raw Prediction JSON (Colab / API Contract)</h3>
+                                <button type="button" id="btnCopyJson" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.75rem; width: auto; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); height: auto; display: flex; align-items: center; gap: 0.25rem;">
+                                    <span>📋</span> Copy JSON
+                                </button>
+                            </div>
+                            <pre style="background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; max-height: 250px; overflow-y: auto; text-align: left; font-family: 'Courier New', Courier, monospace; font-size: 0.8rem; color: #a7f3d0; white-space: pre-wrap; word-break: break-all; margin: 0;"><code id="rawJsonBlock">{}</code></pre>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -1928,6 +1939,9 @@
                 // Show predictions
                 predictionBox.style.display = "block";
 
+                // Populate Raw JSON block
+                document.getElementById("rawJsonBlock").textContent = JSON.stringify(result, null, 2);
+
                 // Populate explainability breakdown page
                 populateExplainability(output.explanation_steps);
 
@@ -1938,6 +1952,28 @@
                 predictForm.querySelector("button").disabled = false;
             }
         });
+
+        // Copy JSON Button Handler
+        const btnCopyJson = document.getElementById("btnCopyJson");
+        if (btnCopyJson) {
+            btnCopyJson.addEventListener("click", () => {
+                const codeBlock = document.getElementById("rawJsonBlock");
+                if (codeBlock) {
+                    navigator.clipboard.writeText(codeBlock.textContent)
+                        .then(() => {
+                            const originalText = btnCopyJson.innerHTML;
+                            btnCopyJson.innerHTML = "<span>✔️</span> Copied!";
+                            setTimeout(() => {
+                                btnCopyJson.innerHTML = originalText;
+                            }, 2000);
+                        })
+                        .catch(err => {
+                            console.error("Failed to copy JSON: ", err);
+                            alert("Failed to copy JSON to clipboard.");
+                        });
+                }
+            });
+        }
 
         // Reset Button Handler
         const resetBtn = document.getElementById("resetBtn");
@@ -1976,6 +2012,7 @@
                 document.getElementById("metricsPanel").style.display = "none";
                 document.getElementById("warningBox").style.display = "none";
                 document.getElementById("predictionBox").style.display = "none";
+                document.getElementById("rawJsonBlock").textContent = "{}";
                 document.getElementById("explainContent").style.display = "none";
                 document.getElementById("explainPlaceholder").style.display = "block";
                 document.getElementById("btnPageExplain").style.display = "none";
