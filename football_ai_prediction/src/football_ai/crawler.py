@@ -51,10 +51,23 @@ def normalize_player_name(name: str) -> str:
     return "".join([c for c in nfkd_form if not unicodedata.combining(c)]).strip()
 
 
+def standardize_position(pos: str) -> str:
+    pos_clean = str(pos).strip().upper()
+    if pos_clean in ["GK", "GOALKEEPER"]:
+        return "GK"
+    if pos_clean in ["DF", "DEFENDER", "BACK", "DEFENCE"]:
+        return "DF"
+    if pos_clean in ["MF", "MIDFIELDER", "MIDFIELD"]:
+        return "MF"
+    if pos_clean in ["FW", "FORWARD", "STRIKER", "ATTACKER", "WINGER"]:
+        return "FW"
+    return pos_clean
+
+
 def infer_position_from_stats(row: pd.Series | dict) -> str:
     """Infer player position based on stats and player name keywords."""
     if "position" in row and pd.notna(row["position"]) and str(row["position"]).strip():
-        pos = str(row["position"]).strip().upper()
+        pos = standardize_position(row["position"])
         if pos in ["GK", "DF", "MF", "FW"]:
             return pos
 
@@ -125,7 +138,12 @@ def validate_and_standardize_players(df: pd.DataFrame) -> tuple[pd.DataFrame, li
         "xg_x90": "xg x90",
         "goals_vs_xg_x90": "Goals vs xG x90",
         "shots_x90": "shots x90",
-        "sot_x90": "sot x90"
+        "sot_x90": "sot x90",
+        "saves_made": "saves_made",
+        "goals_conceded": "goals_conceded",
+        "save_perc": "save_perc",
+        "goals_prevented": "goals_prevented",
+        "xgot_conceded": "xgot_conceded"
     }
 
     # Potential column variants to check (case-insensitive, cleaned check)
@@ -145,7 +163,12 @@ def validate_and_standardize_players(df: pd.DataFrame) -> tuple[pd.DataFrame, li
         "xg_x90": ["xg_x90", "xg_per_90", "xg_90", "xg_x90"],
         "goals_vs_xg_x90": ["goals_vs_xg_x90", "goals_vs_xg_per_90", "goals_vs_xg_90"],
         "shots_x90": ["shots_x90", "shots_per_90", "shots_90"],
-        "sot_x90": ["sot_x90", "sot_per_90", "sot_90"]
+        "sot_x90": ["sot_x90", "sot_per_90", "sot_90"],
+        "saves_made": ["saves_made", "saves", "saves_made_90"],
+        "goals_conceded": ["goals_conceded", "conceded"],
+        "save_perc": ["save_perc", "save_percent", "save_", "save_pct"],
+        "goals_prevented": ["goals_prevented", "prevented"],
+        "xgot_conceded": ["xgot_conceded", "xgot"]
     }
 
     cleaned_input_cols = {clean_column_name(c): c for c in df.columns}
@@ -182,7 +205,8 @@ def validate_and_standardize_players(df: pd.DataFrame) -> tuple[pd.DataFrame, li
                 s = df[matched_col].astype(str).str.replace("%", "").str.replace(",", "")
                 standardized[internal_key] = pd.to_numeric(s, errors="coerce").fillna(0.0)
         else:
-            missing_fields.append(required_labels[internal_key])
+            if internal_key not in ["saves_made", "goals_conceded", "save_perc", "goals_prevented", "xgot_conceded"]:
+                missing_fields.append(required_labels[internal_key])
             if internal_key in ["name", "nationality"]:
                 standardized[internal_key] = "Unknown"
             else:
@@ -194,13 +218,13 @@ def validate_and_standardize_players(df: pd.DataFrame) -> tuple[pd.DataFrame, li
     # Infer position if not explicitly present
     position_col = next((c for c in df.columns if clean_column_name(c) in ["pos", "position"]), None)
     if position_col is not None:
-        standardized["position"] = df[position_col].astype(str).str.strip().str.upper()
+        standardized["position"] = df[position_col].apply(standardize_position)
     else:
         # Infer using our heuristic
         inferred = []
         for _, row in standardized.iterrows():
             inferred.append(infer_position_from_stats(row))
-        standardized["position"] = inferred
+        standardized["position"] = [standardize_position(pos) for pos in inferred]
 
     # Add backward compatibility fields
     standardized["xg_per_90"] = standardized["xg_x90"]
@@ -225,7 +249,8 @@ def validate_and_standardize_players(df: pd.DataFrame) -> tuple[pd.DataFrame, li
         "team", "name", "nationality", "position", "apps", "mins", "goals", "xg", "goals_vs_xg", 
         "shots", "sot", "conv_pct", "xg_per_shot", "goals_x90", "xg_x90", "goals_vs_xg_x90", 
         "shots_x90", "sot_x90", "xg_per_90", "goals_per_90", "xa_per_90", "assists_per_90", 
-        "start_probability", "status"
+        "start_probability", "status",
+        "saves_made", "goals_conceded", "save_perc", "goals_prevented", "xgot_conceded"
     ]
     
     return standardized[cols], missing_fields
@@ -490,7 +515,12 @@ def detect_and_parse_players(html_text: str) -> pd.DataFrame:
                         "xa_per_90": xa_per_90,
                         "assists_per_90": assists_per_90,
                         "start_probability": start_probability,
-                        "status": "active"
+                        "status": "active",
+                        "saves_made": 0.0,
+                        "goals_conceded": 0.0,
+                        "save_perc": 0.0,
+                        "goals_prevented": 0.0,
+                        "xgot_conceded": 0.0
                     })
                     
     if not all_players:
@@ -502,8 +532,121 @@ def detect_and_parse_players(html_text: str) -> pd.DataFrame:
 
 
 def enrich_match_data(df: pd.DataFrame) -> pd.DataFrame:
-    """Enrich scraped raw match records with ELO, Elo Ranks, and first goal team."""
+    """Enrich raw match records with ELO, Elo Ranks, and first goal team.
+
+    Handles multiple common column naming conventions from different data
+    sources (e.g. home_team_name / home_team_goal_count / elo_rating).
+    If ELO columns are already present they are preserved as-is; otherwise
+    they are computed from the match results using an Elo K=32 algorithm.
+    """
     df = df.copy()
+
+    # ------------------------------------------------------------------
+    # Step 0: Column alias resolution
+    # Map alternative/source-specific column names to canonical names so
+    # that data from different providers is handled transparently.
+    # ------------------------------------------------------------------
+    ALIAS_MAP = {
+        # Team names
+        "home_team_name": "home_team",
+        "away_team_name": "away_team",
+        "home_club_name": "home_team",
+        "away_club_name": "away_team",
+        # Goal counts
+        "home_team_goal_count": "home_goals",
+        "away_team_goal_count": "away_goals",
+        "home_score": "home_goals",
+        "away_score": "away_goals",
+        "fthg": "home_goals",
+        "ftag": "away_goals",
+        # Date aliases
+        "date_gmt": "date",
+        "match_date": "date",
+        "kickoff": "date",
+        # Tournament / competition
+        "league": "competition",
+        "tournament": "competition",
+        "div": "competition",
+        # ELO rating aliases — common variants from different data sources
+        "home_elo_rating": "home_elo",
+        "home_elo_score": "home_elo",
+        "home_rating": "home_elo",
+        "homeelo": "home_elo",
+        "elo_home": "home_elo",
+        "h_elo": "home_elo",
+        "home_team_elo": "home_elo",
+        "away_elo_rating": "away_elo",
+        "away_elo_score": "away_elo",
+        "away_rating": "away_elo",
+        "awayelo": "away_elo",
+        "elo_away": "away_elo",
+        "a_elo": "away_elo",
+        "away_team_elo": "away_elo",
+        # ELO rank aliases
+        "home_elo_rank": "home_elo_rank",   # already canonical, but keep for completeness
+        "home_rank": "home_elo_rank",
+        "home_fifa_rank": "home_elo_rank",
+        "home_team_rank": "home_elo_rank",
+        "h_rank": "home_elo_rank",
+        "home_ranking": "home_elo_rank",
+        "away_rank": "away_elo_rank",
+        "away_fifa_rank": "away_elo_rank",
+        "away_team_rank": "away_elo_rank",
+        "a_rank": "away_elo_rank",
+        "away_ranking": "away_elo_rank",
+    }
+    rename = {}
+    for alias, canonical in ALIAS_MAP.items():
+        if alias in df.columns and canonical not in df.columns:
+            rename[alias] = canonical
+    if rename:
+        df = df.rename(columns=rename)
+
+    # ------------------------------------------------------------------
+    # Step 0b: ELO / rank alias resolution (per-team columns)
+    # Some datasets store a single elo_rating / fifa_rank column in a
+    # team-stats CSV that gets merged in.  Detect and split them into the
+    # home_ / away_ variants if needed.
+    #
+    # Pattern: if the merged frame has a 'team' column alongside
+    # 'elo_rating' / 'fifa_rank', those rows represent per-team stats.
+    # We join them onto the match rows by home_team / away_team.
+    # ------------------------------------------------------------------
+    elo_cols_canonical = {"home_elo", "away_elo", "home_elo_rank", "away_elo_rank"}
+    missing_elo = elo_cols_canonical - set(df.columns)
+
+    if missing_elo and "team" in df.columns:
+        # Build a team->rating lookup from the elo_rating / fifa_rank columns
+        elo_lookup = {}
+        rank_lookup = {}
+        for _, row in df[["team", "elo_rating" if "elo_rating" in df.columns else "team",
+                            "fifa_rank" if "fifa_rank" in df.columns else "team"]].drop_duplicates().iterrows():
+            t = row.get("team")
+            if pd.notna(t) and str(t).strip():
+                if "elo_rating" in df.columns:
+                    val = pd.to_numeric(row.get("elo_rating"), errors="coerce")
+                    if pd.notna(val):
+                        elo_lookup[str(t).strip()] = val
+                if "fifa_rank" in df.columns:
+                    val = pd.to_numeric(row.get("fifa_rank"), errors="coerce")
+                    if pd.notna(val):
+                        rank_lookup[str(t).strip()] = val
+
+        if elo_lookup and "home_elo" not in df.columns and "away_elo" not in df.columns:
+            df["home_elo"] = df["home_team"].apply(lambda t: elo_lookup.get(str(t).strip(), float("nan")))
+            df["away_elo"] = df["away_team"].apply(lambda t: elo_lookup.get(str(t).strip(), float("nan")))
+        if rank_lookup and "home_elo_rank" not in df.columns and "away_elo_rank" not in df.columns:
+            df["home_elo_rank"] = df["home_team"].apply(lambda t: rank_lookup.get(str(t).strip(), float("nan")))
+            df["away_elo_rank"] = df["away_team"].apply(lambda t: rank_lookup.get(str(t).strip(), float("nan")))
+
+    # Drop rows that are missing both home_team and away_team (came from
+    # the team-stats-only rows in a merged frame)
+    if "home_team" in df.columns and "away_team" in df.columns:
+        df = df[df["home_team"].notna() & df["away_team"].notna()]
+        df = df[df["home_team"].astype(str).str.strip() != ""]
+        df = df[df["away_team"].astype(str).str.strip() != ""]
+        df = df.reset_index(drop=True)
+
     if 'date' not in df.columns or df['date'].empty:
         df['date'] = pd.date_range(start='2024-01-01', periods=len(df)).strftime('%Y-%m-%d')
     else:
@@ -529,53 +672,129 @@ def enrich_match_data(df: pd.DataFrame) -> pd.DataFrame:
                 first_goal_team.append("")
         df['first_goal_team'] = first_goal_team
 
-    # Calculate Elo ratings
-    K = 32
-    elo = {}
-    home_elos = []
-    away_elos = []
-    
-    for idx, row in df.iterrows():
-        h, a = row['home_team'], row['away_team']
-        if h not in elo: elo[h] = 1500.0
-        if a not in elo: elo[a] = 1500.0
-        
-        home_elos.append(elo[h])
-        away_elos.append(elo[a])
-        
-        r_home = elo[h]
-        r_away = elo[a]
-        e_home = 1 / (1 + 10 ** ((r_away - r_home) / 400))
-        e_away = 1 / (1 + 10 ** ((r_home - r_away) / 400))
-        
-        hg, ag = row['home_goals'], row['away_goals']
-        if hg > ag:
-            s_home, s_away = 1.0, 0.0
-        elif hg < ag:
-            s_home, s_away = 0.0, 1.0
-        else:
-            s_home, s_away = 0.5, 0.5
-            
-        elo[h] += K * (s_home - e_home)
-        elo[a] += K * (s_away - e_away)
-        
-    df['home_elo'] = home_elos
-    df['away_elo'] = away_elos
+    # ------------------------------------------------------------------
+    # ELO ratings: only compute if not already supplied by the caller.
+    # This preserves real-world ELO values from user-uploaded CSV files
+    # and prevents goal predictions from being flattened toward the mean.
+    #
+    # Three cases:
+    #   1. All ELO columns present and fully populated → preserve as-is.
+    #   2. ELO columns absent entirely → compute from match history.
+    #   3. ELO columns present but partially NaN (mixed file upload) →
+    #      preserve supplied values; fill missing rows via K=32 algorithm.
+    # ------------------------------------------------------------------
+    elo_cols_exist = all(col in df.columns for col in ('home_elo', 'away_elo', 'home_elo_rank', 'away_elo_rank'))
 
-    # Elo ranks
-    latest_elos = sorted(elo.items(), key=lambda x: x[1], reverse=True)
-    ranks = {team: rank + 1 for rank, (team, _) in enumerate(latest_elos)}
-    df['home_elo_rank'] = [ranks.get(t, 50) for t in df['home_team']]
-    df['away_elo_rank'] = [ranks.get(t, 50) for t in df['away_team']]
+    if elo_cols_exist:
+        # Coerce to numeric in case they came in as strings
+        for col in ('home_elo', 'away_elo', 'home_elo_rank', 'away_elo_rank'):
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+
+        # Check if any rows are missing ELO data (e.g. mixed-format upload)
+        elo_missing_mask = df['home_elo'].isna() | df['away_elo'].isna()
+
+        if elo_missing_mask.any():
+            # Compute ELO from match history for ALL rows using K=32,
+            # then backfill only the rows that were missing values.
+            K = 32
+            elo = {}
+            computed_home = []
+            computed_away = []
+
+            for _, row in df.iterrows():
+                h, a = row['home_team'], row['away_team']
+                if h not in elo: elo[h] = 1500.0
+                if a not in elo: elo[a] = 1500.0
+
+                computed_home.append(elo[h])
+                computed_away.append(elo[a])
+
+                r_home, r_away = elo[h], elo[a]
+                e_home = 1 / (1 + 10 ** ((r_away - r_home) / 400))
+                e_away = 1 / (1 + 10 ** ((r_home - r_away) / 400))
+
+                hg, ag = row['home_goals'], row['away_goals']
+                if hg > ag:   s_home, s_away = 1.0, 0.0
+                elif hg < ag: s_home, s_away = 0.0, 1.0
+                else:         s_home, s_away = 0.5, 0.5
+
+                elo[h] += K * (s_home - e_home)
+                elo[a] += K * (s_away - e_away)
+
+            computed_home_s = pd.Series(computed_home, index=df.index)
+            computed_away_s = pd.Series(computed_away, index=df.index)
+
+            # Fill NaN cells with computed values; keep supplied values intact
+            df['home_elo'] = df['home_elo'].fillna(computed_home_s)
+            df['away_elo'] = df['away_elo'].fillna(computed_away_s)
+
+            # Compute ranks from final ELO state for missing rank rows
+            latest_elos = sorted(elo.items(), key=lambda x: x[1], reverse=True)
+            ranks = {team: rank + 1 for rank, (team, _) in enumerate(latest_elos)}
+            rank_missing_mask = df['home_elo_rank'].isna() | df['away_elo_rank'].isna()
+            df.loc[rank_missing_mask, 'home_elo_rank'] = df.loc[rank_missing_mask, 'home_team'].map(ranks).fillna(50)
+            df.loc[rank_missing_mask, 'away_elo_rank'] = df.loc[rank_missing_mask, 'away_team'].map(ranks).fillna(50)
+        else:
+            # All ELO values are present — nothing to compute
+            pass
+
+        # Final type cleanup
+        for col in ('home_elo', 'away_elo'):
+            df[col] = df[col].fillna(1500.0)
+        for col in ('home_elo_rank', 'away_elo_rank'):
+            df[col] = df[col].fillna(50)
+
+    else:
+        # Dynamically compute ELO ratings from match results
+        K = 32
+        elo = {}
+        home_elos = []
+        away_elos = []
+        
+        for idx, row in df.iterrows():
+            h, a = row['home_team'], row['away_team']
+            if h not in elo: elo[h] = 1500.0
+            if a not in elo: elo[a] = 1500.0
+            
+            home_elos.append(elo[h])
+            away_elos.append(elo[a])
+            
+            r_home = elo[h]
+            r_away = elo[a]
+            e_home = 1 / (1 + 10 ** ((r_away - r_home) / 400))
+            e_away = 1 / (1 + 10 ** ((r_home - r_away) / 400))
+            
+            hg, ag = row['home_goals'], row['away_goals']
+            if hg > ag:
+                s_home, s_away = 1.0, 0.0
+            elif hg < ag:
+                s_home, s_away = 0.0, 1.0
+            else:
+                s_home, s_away = 0.5, 0.5
+                
+            elo[h] += K * (s_home - e_home)
+            elo[a] += K * (s_away - e_away)
+            
+        df['home_elo'] = home_elos
+        df['away_elo'] = away_elos
+
+        # Elo ranks
+        latest_elos = sorted(elo.items(), key=lambda x: x[1], reverse=True)
+        ranks = {team: rank + 1 for rank, (team, _) in enumerate(latest_elos)}
+        df['home_elo_rank'] = [ranks.get(t, 50) for t in df['home_team']]
+        df['away_elo_rank'] = [ranks.get(t, 50) for t in df['away_team']]
 
     if 'competition' not in df.columns:
         df['competition'] = 'Scraped Match'
-        
-    cols = [
+
+    # Build output column list — preserve any extra columns the user included
+    required_cols = [
         'date', 'home_team', 'away_team', 'home_goals', 'away_goals', 'first_goal_team',
         'home_elo', 'away_elo', 'home_elo_rank', 'away_elo_rank', 'competition'
     ]
-    return df[cols]
+    extra_cols = [c for c in df.columns if c not in required_cols]
+    return df[required_cols + extra_cols]
+
 
 
 def crawl_and_process(

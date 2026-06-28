@@ -13,6 +13,13 @@ def test_prediction_matches_required_json_contract():
     assert "score_prediction" in output
     assert "goal_insights" in output
     assert "player_prediction" in output
+    assert "explanation_steps" in output
+
+    explanation = output["explanation_steps"]
+    assert "step1_profiles" in explanation
+    assert "step2_expected_goals" in explanation
+    assert "step3_joint_distribution" in explanation
+    assert "step4_insights_math" in explanation
 
     win_probabilities = output["match_prediction"]["win_probabilities"]
     assert win_probabilities["home_team"]["team"] == "Argentina"
