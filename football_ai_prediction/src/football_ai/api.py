@@ -87,7 +87,9 @@ def load_uploaded_files(upload_files: list[UploadFile] | None) -> pd.DataFrame |
     import pandas as pd
     dfs = []
     
-    debug_log_path = Path(__file__).resolve().parents[2] / "debug_upload.log"
+    import tempfile
+    debug_log_path = Path(tempfile.gettempdir()) / "soccer_sense" / "debug_upload.log"
+    debug_log_path.parent.mkdir(parents=True, exist_ok=True)
     with open(debug_log_path, "a", encoding="utf-8") as f:
         f.write("\n--- Individual Files Columns ---\n")
         
@@ -147,7 +149,9 @@ def train_from_upload(
         
         # Write debug log of uploaded files and columns
         try:
-            debug_log_path = Path(__file__).resolve().parents[2] / "debug_upload.log"
+            import tempfile
+            debug_log_path = Path(tempfile.gettempdir()) / "soccer_sense" / "debug_upload.log"
+            debug_log_path.parent.mkdir(parents=True, exist_ok=True)
             with open(debug_log_path, "w", encoding="utf-8") as f:
                 f.write("=== Upload Debug ===\n")
                 if matches_files:
