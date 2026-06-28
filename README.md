@@ -2,7 +2,7 @@
 
 An end-to-end football match prediction system that combines **ELO-rated team strength**, **Poisson regression for expected goals**, **Bayesian player scoring probability**, and a **FastAPI REST backend** with a full browser-based UI. The system can be trained on live data scraped from any URL or via file upload, and serves predictions covering match outcome, scoreline, both-teams-to-score, clean sheets, and per-player goal probability.
 
----
+------
 
 ## Table of Contents
 
