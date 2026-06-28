@@ -18,6 +18,7 @@
 
 !/models/
 !/models/.gitkeep
+!/models/*.pkl
 
 !/scratch/
 !/scratch/refactor_train.py
