@@ -5,3 +5,5 @@ tests
 Dockerfile
 .git
 .github
+debug_upload.log
+scratch

@@ -118,21 +118,21 @@ football_ai_prediction/
 
 ## Libraries Used
 
-| Library | Version | Purpose |
-|---|---|---|
-| **pandas** | ≥ 2.0 | Data loading, manipulation, DataFrame operations |
-| **numpy** | ≥ 1.24 | Numerical computation, PMF arrays, matrix operations |
-| **scikit-learn** | ≥ 1.3 | `LogisticRegression`, `PoissonRegressor`, `StandardScaler`, `Pipeline`, `DummyClassifier/Regressor` |
-| **scipy** | ≥ 1.10 | `scipy.stats.poisson` — PMF computation for score distributions |
-| **joblib** | ≥ 1.3 | Model loading (legacy support) |
-| **fastapi** | ≥ 0.110 | REST API framework — all HTTP endpoints |
-| **uvicorn** | ≥ 0.27 | ASGI server for running FastAPI |
-| **pydantic** | (via fastapi) | Request/response validation (`MatchInput`, `CrawlTrainInput`) |
-| **requests** | ≥ 2.31 | HTTP client for web crawling |
-| **beautifulsoup4** | ≥ 4.12 | HTML parsing for web-scraped match/player tables |
-| **cloudpickle** | ≥ 3.0 | Advanced serialization (dependency for artifact format) |
-| **python-multipart** | ≥ 0.0.12 | Multipart file upload support for FastAPI |
-| **pytest** | ≥ 8.0 | Test framework |
+| Library              | Version       | Purpose                                                                                             |
+| -------------------- | ------------- | --------------------------------------------------------------------------------------------------- |
+| **pandas**           | ≥ 2.0         | Data loading, manipulation, DataFrame operations                                                    |
+| **numpy**            | ≥ 1.24        | Numerical computation, PMF arrays, matrix operations                                                |
+| **scikit-learn**     | ≥ 1.3         | `LogisticRegression`, `PoissonRegressor`, `StandardScaler`, `Pipeline`, `DummyClassifier/Regressor` |
+| **scipy**            | ≥ 1.10        | `scipy.stats.poisson` — PMF computation for score distributions                                     |
+| **joblib**           | ≥ 1.3         | Model loading (legacy support)                                                                      |
+| **fastapi**          | ≥ 0.110       | REST API framework — all HTTP endpoints                                                             |
+| **uvicorn**          | ≥ 0.27        | ASGI server for running FastAPI                                                                     |
+| **pydantic**         | (via fastapi) | Request/response validation (`MatchInput`, `CrawlTrainInput`)                                       |
+| **requests**         | ≥ 2.31        | HTTP client for web crawling                                                                        |
+| **beautifulsoup4**   | ≥ 4.12        | HTML parsing for web-scraped match/player tables                                                    |
+| **cloudpickle**      | ≥ 3.0         | Advanced serialization (dependency for artifact format)                                             |
+| **python-multipart** | ≥ 0.0.12      | Multipart file upload support for FastAPI                                                           |
+| **pytest**           | ≥ 8.0         | Test framework                                                                                      |
 
 **Python version:** 3.12 (see `.python-version`)
 
@@ -208,14 +208,15 @@ PMF truncated at 15 goals and re-normalized to sum to 1.
 
 All use the same features and are trained in parallel with the same `C` hyperparameter:
 
-| Model | Target |
-|---|---|
-| `btts_model` | Both Teams to Score (binary: 0/1) |
-| `first_goal_model` | First goal scored by home team (binary: 0/1) |
-| `home_clean_sheet_model` | Home team keeps clean sheet |
-| `away_clean_sheet_model` | Away team keeps clean sheet |
+| Model                    | Target                                       |
+| ------------------------ | -------------------------------------------- |
+| `btts_model`             | Both Teams to Score (binary: 0/1)            |
+| `first_goal_model`       | First goal scored by home team (binary: 0/1) |
+| `home_clean_sheet_model` | Home team keeps clean sheet                  |
+| `away_clean_sheet_model` | Away team keeps clean sheet                  |
 
 > At inference time, BTTS and clean sheet probabilities are **re-derived from the Poisson distribution** using analytical formulas for consistency:
+>
 > - `P(BTTS) = (1 − e^−λ_home) × (1 − e^−λ_away)`
 > - `P(home CS) = e^−λ_away`
 > - `P(away CS) = e^−λ_home`
@@ -228,28 +229,33 @@ All use the same features and are trained in parallel with the same `C` hyperpar
 For each outfield player, expected goals per match (λ_player) is estimated as:
 
 **Step 1 — Bayesian shrinkage** (low-minute penalty):
+
 ```
 shrinkage = mins / (mins + 90)
 ```
 
 **Step 2 — xG / actual goals blend** (for players with ≥90 min):
+
 ```
 weight   = min(0.5, mins / 900)
 base_λ   = (1 - weight) × xG_90 + weight × Goals_90
 ```
 
 **Step 3 — Shot conversion adjustment** (if shots-on-target and conversion% available):
+
 ```
 shot_derived = SOT_90 × conversion_decimal
 base_λ       = 0.7 × base_λ + 0.3 × shot_derived
 ```
 
 **Step 4 — Final expected goals:**
+
 ```
 expected_goals = base_λ × start_probability × shrinkage
 ```
 
 **Goal probabilities (Poisson):**
+
 ```
 P(≥1 goal) = 1 − e^−expected_goals   (capped at 85%)
 P(≥2 goals) ≈ P(≥1) × expected_goals / 2   (capped at 50%)
@@ -283,10 +289,10 @@ Half-life = 365 days — a match from one year ago is weighted at 50% of a curre
 
 ### 9. Two-Stage Training (Dev + Production)
 
-| Stage | Data Used | Purpose |
-|---|---|---|
-| **Dev model** | First 75% of data (chronologically) | Validation metrics, hyperparameter selection |
-| **Production model** | 100% of data | Maximum accuracy for deployment |
+| Stage                | Data Used                           | Purpose                                      |
+| -------------------- | ----------------------------------- | -------------------------------------------- |
+| **Dev model**        | First 75% of data (chronologically) | Validation metrics, hyperparameter selection |
+| **Production model** | 100% of data                        | Maximum accuracy for deployment              |
 
 Both models are serialized as `PurePythonPipeline` — a pure-Python re-implementation of `StandardScaler → Logistic/Poisson` that does **not require scikit-learn at inference time**.
 
@@ -296,18 +302,18 @@ Both models are serialized as `PurePythonPipeline` — a pure-Python re-implemen
 
 All 10 features used for training and inference:
 
-| Feature | Description |
-|---|---|
-| `home_elo` | Home team ELO rating (most recent match) |
-| `away_elo` | Away team ELO rating (most recent match) |
-| `home_elo_rank` | Home team ELO-based world ranking |
-| `away_elo_rank` | Away team ELO-based world ranking |
-| `elo_diff` | `home_elo − away_elo` |
-| `rank_diff` | `away_elo_rank − home_elo_rank` |
-| `home_gk_save_ratio` | Primary GK's save percentage (fraction, e.g. 0.72) |
-| `away_gk_save_ratio` | Primary GK's save percentage |
-| `home_gk_prevented_per_90` | Goals prevented per 90 minutes (primary GK) |
-| `away_gk_prevented_per_90` | Goals prevented per 90 minutes (primary GK) |
+| Feature                    | Description                                        |
+| -------------------------- | -------------------------------------------------- |
+| `home_elo`                 | Home team ELO rating (most recent match)           |
+| `away_elo`                 | Away team ELO rating (most recent match)           |
+| `home_elo_rank`            | Home team ELO-based world ranking                  |
+| `away_elo_rank`            | Away team ELO-based world ranking                  |
+| `elo_diff`                 | `home_elo − away_elo`                              |
+| `rank_diff`                | `away_elo_rank − home_elo_rank`                    |
+| `home_gk_save_ratio`       | Primary GK's save percentage (fraction, e.g. 0.72) |
+| `away_gk_save_ratio`       | Primary GK's save percentage                       |
+| `home_gk_prevented_per_90` | Goals prevented per 90 minutes (primary GK)        |
+| `away_gk_prevented_per_90` | Goals prevented per 90 minutes (primary GK)        |
 
 **Team profiles** are built by grouping all historical matches and taking the **most recent ELO** for each team. Goalkeeper features are sourced from the player statistics file.
 
@@ -389,23 +395,23 @@ JSON response
 
 ## API Endpoints
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/` | Serves the browser UI (`index.html`) |
-| `GET` | `/health` | Health check — returns `{"status":"ok"}` |
-| `POST` | `/predict` | Predict match outcome for `{home_team, away_team}` |
-| `GET` | `/teams` | List all teams in the loaded model |
-| `GET` | `/team-profiles` | Full team profile data (ELO, GK stats) |
-| `GET` | `/model-version` | Current model version string |
-| `POST` | `/train-from-upload` | Upload CSV/Excel files and retrain model |
-| `POST` | `/train-from-url` | Scrape URLs and retrain model |
-| `POST` | `/update-version` | Update model version tag |
-| `POST` | `/reset` | Reset to default sample data and retrain |
-| `GET` | `/download/matches` | Download processed matches CSV |
-| `GET` | `/download/players` | Download processed players CSV |
-| `GET` | `/download/dev_model` | Download dev model pickle |
-| `GET` | `/download/production_model` | Download production model pickle |
-| `GET` | `/download/production_model_versioned` | Download versioned production model |
+| Method | Endpoint                               | Description                                        |
+| ------ | -------------------------------------- | -------------------------------------------------- |
+| `GET`  | `/`                                    | Serves the browser UI (`index.html`)               |
+| `GET`  | `/health`                              | Health check — returns `{"status":"ok"}`           |
+| `POST` | `/predict`                             | Predict match outcome for `{home_team, away_team}` |
+| `GET`  | `/teams`                               | List all teams in the loaded model                 |
+| `GET`  | `/team-profiles`                       | Full team profile data (ELO, GK stats)             |
+| `GET`  | `/model-version`                       | Current model version string                       |
+| `POST` | `/train-from-upload`                   | Upload CSV/Excel files and retrain model           |
+| `POST` | `/train-from-url`                      | Scrape URLs and retrain model                      |
+| `POST` | `/update-version`                      | Update model version tag                           |
+| `POST` | `/reset`                               | Reset to default sample data and retrain           |
+| `GET`  | `/download/matches`                    | Download processed matches CSV                     |
+| `GET`  | `/download/players`                    | Download processed players CSV                     |
+| `GET`  | `/download/dev_model`                  | Download dev model pickle                          |
+| `GET`  | `/download/production_model`           | Download production model pickle                   |
+| `GET`  | `/download/production_model_versioned` | Download versioned production model                |
 
 ### Example Prediction Request
 
@@ -466,17 +472,17 @@ curl -X POST http://127.0.0.1:8000/predict \
 
 Required columns:
 
-| Column | Type | Description |
-|---|---|---|
-| `date` | string / date | Match date (ISO format preferred) |
-| `home_team` | string | Home team name |
-| `away_team` | string | Away team name |
-| `home_goals` | int | Goals scored by home team |
-| `away_goals` | int | Goals scored by away team |
-| `home_elo` | float | Home team ELO rating |
-| `away_elo` | float | Away team ELO rating |
-| `home_elo_rank` | float | Home team ELO rank |
-| `away_elo_rank` | float | Away team ELO rank |
+| Column          | Type          | Description                       |
+| --------------- | ------------- | --------------------------------- |
+| `date`          | string / date | Match date (ISO format preferred) |
+| `home_team`     | string        | Home team name                    |
+| `away_team`     | string        | Away team name                    |
+| `home_goals`    | int           | Goals scored by home team         |
+| `away_goals`    | int           | Goals scored by away team         |
+| `home_elo`      | float         | Home team ELO rating              |
+| `away_elo`      | float         | Away team ELO rating              |
+| `home_elo_rank` | float         | Home team ELO rank                |
+| `away_elo_rank` | float         | Away team ELO rank                |
 
 > If ELO columns are missing, `enrich_match_data()` in `crawler.py` **automatically computes** them from historical match sequences using a rolling ELO algorithm (K=32, starting at 1500).
 
@@ -484,21 +490,21 @@ Required columns:
 
 Useful columns (all optional — missing fields are inferred or defaulted):
 
-| Column | Description |
-|---|---|
-| `name` | Player name |
-| `team` | National team |
-| `position` | `GK` / `DF` / `MF` / `FW` (auto-inferred if missing) |
-| `mins` | Total minutes played |
-| `goals` | Goals scored |
-| `xg` | Total expected goals |
-| `xg_x90` / `xg_per_90` | xG per 90 minutes |
-| `goals_x90` / `goals_per_90` | Goals per 90 minutes |
-| `sot_x90` | Shots on target per 90 |
-| `conv_pct` | Conversion percentage |
-| `start_probability` | Probability of starting (0–1) |
-| `save_perc` | Goalkeeper save percentage |
-| `goals_prevented` | Goalkeeper goals prevented |
+| Column                       | Description                                          |
+| ---------------------------- | ---------------------------------------------------- |
+| `name`                       | Player name                                          |
+| `team`                       | National team                                        |
+| `position`                   | `GK` / `DF` / `MF` / `FW` (auto-inferred if missing) |
+| `mins`                       | Total minutes played                                 |
+| `goals`                      | Goals scored                                         |
+| `xg`                         | Total expected goals                                 |
+| `xg_x90` / `xg_per_90`       | xG per 90 minutes                                    |
+| `goals_x90` / `goals_per_90` | Goals per 90 minutes                                 |
+| `sot_x90`                    | Shots on target per 90                               |
+| `conv_pct`                   | Conversion percentage                                |
+| `start_probability`          | Probability of starting (0–1)                        |
+| `save_perc`                  | Goalkeeper save percentage                           |
+| `goals_prevented`            | Goalkeeper goals prevented                           |
 
 ### Pipeline Config (`pipeline_config.json`)
 
@@ -589,6 +595,7 @@ python -m src.football_ai.train
 ```
 
 Output:
+
 ```
 Optimal parameters selected: LogisticRegression C=0.1, PoissonRegressor alpha=1.0 (Validation Accuracy: 0.542)
 Saved model to models/soccer_sense.pkl
@@ -657,15 +664,15 @@ pytest tests/test_api_upload.py -v
 
 **Test coverage:**
 
-| Test File | What It Covers |
-|---|---|
-| `test_prediction_contract.py` | JSON output schema validation |
-| `test_prediction_speed.py` | Inference must complete in < 5 seconds |
-| `test_api_upload.py` | File upload and training via API |
-| `test_crawler.py` | Web crawling and data parsing |
-| `test_player_validation.py` | Player data standardization and position inference |
-| `test_dummy_fallback.py` | DummyClassifier/Regressor fallback for small datasets |
-| `test_unavailable_data.py` | "Data Unavailable" response for unknown teams |
+| Test File                     | What It Covers                                        |
+| ----------------------------- | ----------------------------------------------------- |
+| `test_prediction_contract.py` | JSON output schema validation                         |
+| `test_prediction_speed.py`    | Inference must complete in < 5 seconds                |
+| `test_api_upload.py`          | File upload and training via API                      |
+| `test_crawler.py`             | Web crawling and data parsing                         |
+| `test_player_validation.py`   | Player data standardization and position inference    |
+| `test_dummy_fallback.py`      | DummyClassifier/Regressor fallback for small datasets |
+| `test_unavailable_data.py`    | "Data Unavailable" response for unknown teams         |
 
 ---
 
@@ -682,6 +689,7 @@ The `api/index.py` and `vercel.json` configure Vercel deployment:
 ```
 
 Deploy:
+
 ```bash
 vercel deploy
 ```

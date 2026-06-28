@@ -1,50 +1,55 @@
-# Python bytecode
-__pycache__/
-*.py[cod]
-*$py.class
+# Ignore everything by default
+*
 
-# Virtual environments
+# Re-include only the files and folders we want to track
+!/.gitignore
+!/.vercelignore
+!/README.md
+!/requirements.txt
+!/Dockerfile
+!/vercel.json
+!/pipeline_config.json
+
+!/api/
+!/api/index.py
+
+!/data/
+!/data/*.csv
+
+!/models/
+!/models/.gitkeep
+
+!/scratch/
+!/scratch/refactor_train.py
+
+!/src/
+!/src/football_ai/
+!/src/football_ai/**
+
+!/tests/
+!/tests/**
+
+# Keep local and generated files out of commits
 .venv/
 venv/
-ENV/
 env/
-env.bak/
-venv.bak/
-
-# Installer directories
-pip-wheel-metadata/
-*.egg-info/
-*.eggs/
-
-# Pytest
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
 .pytest_cache/
-
-# Distribution / packaging
-build/
-dist/
-
-# Logs
-*.log
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# IDE/editor
-.vscode/
-.idea/
-*.swp
-*.swo
-*.tmp
-
-# Python-specific
-*.pyd
-*.pyo
-*.pyd
-
-# Ignore local Python version management files
-.python-version
-
-# Ignore coverage outputs
+.mypy_cache/
+.ruff_cache/
 .coverage
 htmlcov/
+.ipynb_checkpoints/
+.env
+.env.*
+.python-version
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.log
+*.bak
