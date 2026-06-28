@@ -87,7 +87,9 @@ def load_uploaded_files(upload_files: list[UploadFile] | None) -> pd.DataFrame |
     import pandas as pd
     dfs = []
     
-    debug_log_path = Path(__file__).resolve().parents[2] / "debug_upload.log"
+    import tempfile
+    debug_log_path = Path(tempfile.gettempdir()) / "soccer_sense" / "debug_upload.log"
+    debug_log_path.parent.mkdir(parents=True, exist_ok=True)
     with open(debug_log_path, "a", encoding="utf-8") as f:
         f.write("\n--- Individual Files Columns ---\n")
         
@@ -147,7 +149,9 @@ def train_from_upload(
         
         # Write debug log of uploaded files and columns
         try:
-            debug_log_path = Path(__file__).resolve().parents[2] / "debug_upload.log"
+            import tempfile
+            debug_log_path = Path(tempfile.gettempdir()) / "soccer_sense" / "debug_upload.log"
+            debug_log_path.parent.mkdir(parents=True, exist_ok=True)
             with open(debug_log_path, "w", encoding="utf-8") as f:
                 f.write("=== Upload Debug ===\n")
                 if matches_files:
@@ -344,7 +348,7 @@ def reset_system() -> dict[str, str]:
                     import shutil
                     shutil.copy2(backup_file, p)
                     
-        # Deleting custom models in MODEL_PATH if it is writable/temporary
+        # Delete custom model from tmp if present
         is_model_tmp = tmp_dir in MODEL_PATH.parents or "soccer_sense" in str(MODEL_PATH)
         if is_model_tmp:
             if MODEL_PATH.exists() and MODEL_PATH.is_file():
@@ -360,9 +364,31 @@ def reset_system() -> dict[str, str]:
                     versioned_path.unlink()
                 except Exception:
                     pass
-                
-        # Retrain model using default packaged data (will auto fall back to backups/packaged files)
-        train_model(matches_path=matches_out, players_path=players_out, model_path=MODEL_PATH)
+
+        # Resolve the default data paths for retraining.
+        # On Vercel, DATA_DIR points to /tmp which we just cleared — fall back to the
+        # read-only bundled defaults shipped with the deployment package.
+        # On local, DATA_DIR is writable and the .bak restore above already refreshed it.
+        from .train import READ_ONLY_DATA_DIR
+
+        def _resolve_default(tmp_path: Path, filename: str) -> Path:
+            """Return tmp_path if it still exists (local, after .bak restore),
+            otherwise return the read-only bundled default file."""
+            if tmp_path.exists():
+                return tmp_path
+            bundled = READ_ONLY_DATA_DIR / filename
+            if bundled.exists():
+                return bundled
+            bak = READ_ONLY_DATA_DIR / f"{filename}.bak"
+            if bak.exists():
+                return bak
+            return tmp_path  # let train_model surface a clear error
+
+        matches_default = _resolve_default(matches_out, "sample_matches.csv")
+        players_default = _resolve_default(players_out, "sample_players.csv")
+
+        # Retrain model using default packaged data
+        train_model(matches_path=matches_default, players_path=players_default, model_path=MODEL_PATH)
         
         # Reload predictor to pick up the clean default model
         predictor = FootballPredictor(MODEL_PATH)
