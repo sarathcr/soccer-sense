@@ -1,0 +1,785 @@
+date,home_team,away_team,home_goals,away_goals,first_goal_team,home_elo,away_elo,home_elo_rank,away_elo_rank,competition
+2018-01-01,Ivory Coast,France,0,0,,1713,1996,25,2,Copa America
+2018-01-08,Serbia,Ecuador,0,0,,1793,1828,25,20,Gold Cup
+2018-01-11,Senegal,Ghana,4,0,Senegal,1798,1799,18,27,CONMEBOL Qualifiers
+2018-01-17,Mexico,England,1,0,Mexico,1838,1959,14,3,CONMEBOL Qualifiers
+2018-01-27,Ivory Coast,Egypt,3,2,Ivory Coast,1753,1713,25,27,UEFA Nations League
+2018-01-27,Mexico,Turkey,0,0,,1864,1810,14,20,Friendly
+2018-02-06,Denmark,Mexico,1,3,Denmark,1846,1859,19,14,Copa America
+2018-02-06,Ivory Coast,Ghana,4,1,Ivory Coast,1765,1682,25,27,Africa Cup of Nations
+2018-02-09,Argentina,Ghana,4,1,Argentina,2033,1709,1,27,FIFA World Cup Qualifiers
+2018-02-16,Cameroon,Ghana,2,2,Cameroon,1789,1791,28,27,Gold Cup
+2018-02-16,Ghana,England,1,4,Ghana,1722,1954,27,3,Friendly
+2018-02-19,Morocco,Saudi Arabia,2,1,Morocco,1851,1696,16,32,FIFA World Cup Qualifiers
+2018-02-23,Serbia,Ghana,1,2,Serbia,1800,1767,25,27,CONMEBOL Qualifiers
+2018-02-26,France,Algeria,0,5,Algeria,2022,1777,2,28,Gold Cup
+2018-02-27,Serbia,Argentina,2,0,Serbia,1704,2098,25,1,FIFA World Cup Qualifiers
+2018-03-03,Tunisia,Germany,3,3,Tunisia,1650,1894,31,9,CONMEBOL Qualifiers
+2018-03-08,Serbia,Tunisia,0,0,,1705,1711,25,31,FIFA World Cup Qualifiers
+2018-03-09,Austria,Turkey,1,1,Austria,1748,1779,21,20,Friendly
+2018-03-21,Ghana,United States,2,0,Ghana,1762,1903,27,13,Gold Cup
+2018-03-23,Italy,Saudi Arabia,0,1,Saudi Arabia,1824,1631,12,32,Africa Cup of Nations
+2018-03-26,Portugal,Croatia,2,0,Portugal,1981,1882,6,15,CONMEBOL Qualifiers
+2018-03-27,Peru,Poland,4,2,Peru,1790,1771,25,26,FIFA World Cup Qualifiers
+2018-03-28,Wales,Nigeria,1,2,Wales,1717,1710,29,26,Friendly
+2018-04-10,Scotland,Ghana,1,0,Scotland,1744,1726,26,27,CONMEBOL Qualifiers
+2018-04-15,Belgium,Austria,0,1,Austria,1956,1824,4,21,Africa Cup of Nations
+2018-04-16,Germany,Egypt,4,1,Germany,1902,1787,9,27,UEFA Nations League
+2018-04-18,Cameroon,Chile,2,2,Cameroon,1768,1834,28,22,CONMEBOL Qualifiers
+2018-04-19,Turkey,Cameroon,0,0,,1754,1673,20,28,Friendly
+2018-04-20,Turkey,Ecuador,3,1,Turkey,1851,1855,20,20,Africa Cup of Nations
+2018-04-22,Costa Rica,Germany,1,2,Costa Rica,1719,1938,30,9,Copa America
+2018-04-26,Turkey,South Korea,2,1,Turkey,1853,1824,20,21,FIFA World Cup Qualifiers
+2018-04-30,Poland,Algeria,1,1,Poland,1713,1698,26,28,Friendly
+2018-04-30,Spain,Switzerland,0,0,,1923,1775,8,22,UEFA Nations League
+2018-05-01,Algeria,Japan,0,1,Japan,1787,1809,28,17,CONMEBOL Qualifiers
+2018-05-06,Italy,Uruguay,3,1,Italy,1892,1934,12,10,Copa America
+2018-05-18,Spain,Morocco,1,0,Spain,1929,1868,8,16,Friendly
+2018-05-28,England,Austria,2,0,England,1975,1806,3,21,FIFA World Cup Qualifiers
+2018-05-28,South Korea,Algeria,0,0,,1821,1788,21,28,Copa America
+2018-06-01,Serbia,Scotland,2,1,Serbia,1801,1795,25,26,UEFA Nations League
+2018-06-04,Turkey,Belgium,1,1,Turkey,1795,1969,20,4,World Cup
+2018-06-11,Portugal,Egypt,2,2,Portugal,1987,1791,6,27,Copa America
+2018-06-11,Denmark,Japan,2,0,Denmark,1809,1766,19,17,CONMEBOL Qualifiers
+2018-06-18,Scotland,Sweden,1,0,Scotland,1782,1835,26,23,World Cup
+2018-06-24,Ivory Coast,Switzerland,3,2,Ivory Coast,1772,1834,25,22,Friendly
+2018-06-27,Serbia,Netherlands,0,1,Netherlands,1745,1998,25,7,Africa Cup of Nations
+2018-06-27,Canada,Iran,1,1,Canada,1785,1623,24,33,CONMEBOL Qualifiers
+2018-07-07,Canada,South Korea,1,1,Canada,1764,1824,24,21,World Cup
+2018-07-12,Morocco,Iran,1,0,Morocco,1870,1711,16,33,Gold Cup
+2018-07-16,Serbia,Algeria,0,1,Algeria,1732,1773,25,28,Copa America
+2018-07-19,Brazil,Netherlands,1,0,Brazil,1976,1894,5,7,Friendly
+2018-07-20,Chile,Senegal,1,3,Chile,1809,1835,22,18,UEFA Nations League
+2018-07-20,Denmark,France,2,1,Denmark,1856,2029,19,2,Africa Cup of Nations
+2018-07-23,Peru,Austria,1,1,Peru,1710,1853,25,21,Copa America
+2018-07-27,Portugal,Scotland,1,1,Portugal,1922,1772,6,26,FIFA World Cup Qualifiers
+2018-07-28,Mexico,Algeria,1,0,Mexico,1889,1708,14,28,Copa America
+2018-07-30,Japan,Ivory Coast,2,1,Japan,1860,1799,17,25,Africa Cup of Nations
+2018-07-30,Argentina,Peru,0,2,Peru,2066,1760,1,25,CONMEBOL Qualifiers
+2018-08-02,Mexico,Iran,0,2,Iran,1831,1710,14,33,UEFA Nations League
+2018-08-08,Tunisia,Spain,0,1,Spain,1735,1888,31,8,UEFA Nations League
+2018-08-08,Saudi Arabia,Denmark,4,1,Saudi Arabia,1637,1773,32,19,FIFA World Cup Qualifiers
+2018-08-09,Colombia,Poland,3,2,Colombia,1843,1702,11,26,World Cup
+2018-08-10,Italy,Iran,2,4,Italy,1855,1660,12,33,Gold Cup
+2018-08-11,Italy,Croatia,1,3,Italy,1898,1881,12,15,Africa Cup of Nations
+2018-08-11,Uruguay,France,0,3,France,1908,2036,10,2,UEFA Nations League
+2018-08-18,Morocco,Scotland,4,1,Morocco,1800,1724,16,26,Friendly
+2018-08-20,Cameroon,Argentina,4,2,Cameroon,1736,2043,28,1,Friendly
+2018-08-20,England,Poland,0,1,Poland,1966,1719,3,26,UEFA Nations League
+2018-08-29,Germany,Egypt,0,0,,1932,1708,9,27,World Cup
+2018-08-29,Tunisia,Ghana,3,1,Tunisia,1713,1793,31,27,UEFA Nations League
+2018-09-03,Portugal,Cameroon,0,0,,1907,1765,6,28,FIFA World Cup Qualifiers
+2018-09-03,Portugal,Morocco,1,1,Portugal,1915,1833,6,16,World Cup
+2018-09-04,Serbia,Turkey,0,1,Turkey,1815,1834,25,20,CONMEBOL Qualifiers
+2018-09-05,Brazil,France,2,1,Brazil,1975,1953,5,2,Gold Cup
+2018-09-07,Ecuador,Uruguay,2,4,Ecuador,1824,1916,20,10,UEFA Nations League
+2018-09-07,Uruguay,United States,2,1,Uruguay,1887,1817,10,13,FIFA World Cup Qualifiers
+2018-09-10,Netherlands,Costa Rica,1,1,Netherlands,1903,1742,7,30,Friendly
+2018-09-13,Ghana,Mexico,3,1,Ghana,1732,1844,27,14,UEFA Nations League
+2018-09-17,Serbia,Colombia,0,1,Colombia,1717,1864,25,11,UEFA Nations League
+2018-09-25,Ecuador,Germany,2,2,Ecuador,1753,1919,20,9,World Cup
+2018-09-27,Saudi Arabia,Wales,0,2,Wales,1629,1775,32,29,UEFA Nations League
+2018-09-28,Ghana,Croatia,0,2,Croatia,1775,1860,27,15,UEFA Nations League
+2018-09-28,Uruguay,Egypt,2,0,Uruguay,1891,1735,10,27,CONMEBOL Qualifiers
+2018-09-29,Belgium,Croatia,0,1,Croatia,2010,1779,4,15,Friendly
+2018-09-30,United States,Sweden,1,0,United States,1824,1726,13,23,Gold Cup
+2018-10-04,Turkey,Croatia,0,2,Croatia,1750,1784,20,15,World Cup
+2018-10-09,Scotland,Poland,2,1,Scotland,1741,1765,26,26,Copa America
+2018-10-09,Egypt,Mexico,2,2,Egypt,1749,1813,27,14,Friendly
+2018-10-10,Cameroon,Australia,1,3,Cameroon,1759,1728,28,23,Africa Cup of Nations
+2018-10-12,Croatia,France,0,4,France,1859,1969,15,2,CONMEBOL Qualifiers
+2018-10-13,Switzerland,Australia,2,1,Switzerland,1741,1805,22,23,Friendly
+2018-10-19,Spain,Tunisia,1,0,Spain,1886,1740,8,31,Africa Cup of Nations
+2018-10-25,Ivory Coast,Sweden,0,1,Sweden,1708,1816,25,23,FIFA World Cup Qualifiers
+2018-10-26,Croatia,United States,5,2,Croatia,1793,1793,15,13,Africa Cup of Nations
+2018-10-27,France,Poland,1,2,France,1977,1794,2,26,World Cup
+2018-11-05,Egypt,United States,1,0,Egypt,1718,1883,27,13,World Cup
+2018-11-05,Colombia,Wales,3,0,Colombia,1900,1750,11,29,UEFA Nations League
+2018-11-06,Uruguay,Peru,0,0,,1930,1734,10,25,Copa America
+2018-11-12,Switzerland,Cameroon,0,0,,1759,1737,22,28,Africa Cup of Nations
+2018-11-12,Austria,Argentina,0,3,Argentina,1804,2142,21,1,CONMEBOL Qualifiers
+2018-11-13,Japan,Ecuador,0,2,Ecuador,1771,1813,17,20,FIFA World Cup Qualifiers
+2018-11-15,Turkey,Egypt,0,1,Egypt,1822,1707,20,27,CONMEBOL Qualifiers
+2018-11-18,Australia,South Korea,3,2,Australia,1806,1795,23,21,Gold Cup
+2018-11-19,Iran,Croatia,1,0,Iran,1680,1857,33,15,Africa Cup of Nations
+2018-11-20,Algeria,Egypt,0,1,Egypt,1743,1763,28,27,Friendly
+2018-11-20,Nigeria,Ghana,0,0,,1767,1767,26,27,Gold Cup
+2018-11-24,France,Germany,0,0,,2038,1900,2,9,Friendly
+2018-12-05,Croatia,Cameroon,2,1,Croatia,1812,1770,15,28,Africa Cup of Nations
+2018-12-05,Ghana,Saudi Arabia,1,0,Ghana,1733,1710,27,32,World Cup
+2018-12-10,Chile,Netherlands,0,0,,1821,1998,22,7,UEFA Nations League
+2018-12-11,Germany,United States,1,1,Germany,1975,1841,9,13,CONMEBOL Qualifiers
+2018-12-12,Poland,Nigeria,1,2,Poland,1787,1705,26,26,Gold Cup
+2018-12-15,Egypt,England,0,1,England,1786,1956,27,3,Copa America
+2018-12-15,Uruguay,Spain,1,0,Uruguay,1855,1880,10,8,CONMEBOL Qualifiers
+2018-12-18,England,Croatia,2,2,England,1935,1862,3,15,Copa America
+2018-12-18,Australia,France,1,2,Australia,1781,1958,23,2,Copa America
+2018-12-21,Cameroon,Turkey,1,0,Cameroon,1704,1791,28,20,CONMEBOL Qualifiers
+2019-01-02,Morocco,Brazil,0,4,Brazil,1804,1999,16,5,Copa America
+2019-01-02,Ivory Coast,United States,1,2,Ivory Coast,1796,1826,25,13,Friendly
+2019-01-06,Morocco,Algeria,0,1,Algeria,1857,1792,16,28,Gold Cup
+2019-01-09,Poland,Algeria,0,1,Algeria,1729,1767,26,28,Copa America
+2019-01-17,Brazil,Switzerland,2,1,Brazil,1921,1838,5,22,FIFA World Cup Qualifiers
+2019-01-25,Wales,Croatia,2,0,Wales,1712,1818,29,15,FIFA World Cup Qualifiers
+2019-01-26,Tunisia,Italy,1,1,Tunisia,1692,1925,31,12,CONMEBOL Qualifiers
+2019-02-01,Croatia,Senegal,0,1,Senegal,1847,1762,15,18,Copa America
+2019-02-05,Australia,Turkey,1,0,Australia,1822,1844,23,20,Gold Cup
+2019-02-07,Tunisia,Nigeria,2,2,Tunisia,1669,1794,31,26,UEFA Nations League
+2019-02-08,Cameroon,Ghana,1,2,Cameroon,1729,1790,28,27,World Cup
+2019-02-10,Saudi Arabia,Ecuador,0,1,Ecuador,1652,1811,32,20,UEFA Nations League
+2019-02-11,Canada,Mexico,0,0,,1766,1836,24,14,FIFA World Cup Qualifiers
+2019-02-12,Denmark,Ivory Coast,3,0,Denmark,1799,1729,19,25,FIFA World Cup Qualifiers
+2019-02-13,Iran,Turkey,3,2,Iran,1652,1861,33,20,Africa Cup of Nations
+2019-02-14,Costa Rica,South Korea,2,2,Costa Rica,1758,1826,30,21,Copa America
+2019-02-16,Ghana,Sweden,1,0,Ghana,1767,1776,27,23,UEFA Nations League
+2019-02-16,Algeria,Croatia,0,2,Croatia,1681,1787,28,15,UEFA Nations League
+2019-02-23,South Korea,France,3,2,South Korea,1749,1951,21,2,CONMEBOL Qualifiers
+2019-02-23,Cameroon,Switzerland,0,0,,1705,1744,28,22,Copa America
+2019-02-24,Colombia,Senegal,0,1,Senegal,1844,1756,11,18,Friendly
+2019-02-24,Algeria,Spain,2,1,Algeria,1678,1974,28,8,Copa America
+2019-02-27,England,Austria,4,2,England,2021,1751,3,21,CONMEBOL Qualifiers
+2019-03-03,Algeria,Peru,0,2,Peru,1720,1786,28,25,UEFA Nations League
+2019-03-06,Scotland,Nigeria,0,1,Nigeria,1724,1774,26,26,Copa America
+2019-03-09,Peru,Turkey,2,2,Peru,1774,1847,25,20,Copa America
+2019-03-09,Brazil,United States,1,1,Brazil,1917,1889,5,13,UEFA Nations League
+2019-03-13,Uruguay,Ivory Coast,0,1,Ivory Coast,1938,1700,10,25,Gold Cup
+2019-03-18,Scotland,Senegal,0,0,,1774,1864,26,18,World Cup
+2019-03-19,Argentina,Japan,1,1,Argentina,2056,1791,1,17,World Cup
+2019-03-19,Ghana,Scotland,1,0,Ghana,1790,1784,27,26,Gold Cup
+2019-03-21,Spain,Japan,1,1,Spain,1902,1834,8,17,Gold Cup
+2019-03-25,Peru,Ecuador,2,5,Peru,1760,1844,25,20,Gold Cup
+2019-03-26,Canada,Croatia,1,0,Canada,1727,1840,24,15,UEFA Nations League
+2019-03-31,Belgium,France,3,2,Belgium,1923,2020,4,2,FIFA World Cup Qualifiers
+2019-04-05,Austria,Portugal,0,1,Portugal,1807,1952,21,6,World Cup
+2019-04-08,Morocco,Costa Rica,2,3,Morocco,1814,1659,16,30,World Cup
+2019-04-15,Japan,Canada,2,0,Japan,1781,1787,17,24,UEFA Nations League
+2019-04-15,Nigeria,Japan,0,0,,1765,1870,26,17,CONMEBOL Qualifiers
+2019-04-25,Ghana,Iran,1,5,Ghana,1693,1681,27,33,CONMEBOL Qualifiers
+2019-04-26,England,Wales,1,1,England,1943,1704,3,29,Friendly
+2019-04-27,Sweden,Austria,4,0,Sweden,1724,1852,23,21,Copa America
+2019-04-28,Spain,France,2,1,Spain,1974,1968,8,2,CONMEBOL Qualifiers
+2019-04-29,Canada,Germany,2,0,Canada,1805,1969,24,9,World Cup
+2019-04-30,Mexico,Uruguay,2,0,Mexico,1803,1870,14,10,Friendly
+2019-04-30,Wales,Algeria,1,1,Wales,1711,1730,29,28,World Cup
+2019-05-02,Wales,Peru,1,1,Wales,1717,1711,29,25,Africa Cup of Nations
+2019-05-02,Serbia,Iran,0,4,Iran,1757,1707,25,33,UEFA Nations League
+2019-05-05,Senegal,Ecuador,1,1,Senegal,1787,1769,18,20,UEFA Nations League
+2019-05-06,Morocco,Algeria,3,1,Morocco,1825,1716,16,28,Gold Cup
+2019-05-07,Italy,Brazil,0,0,,1896,1908,12,5,Friendly
+2019-05-16,Colombia,Algeria,1,1,Colombia,1923,1680,11,28,CONMEBOL Qualifiers
+2019-05-16,Egypt,Ivory Coast,0,0,,1730,1707,27,25,Africa Cup of Nations
+2019-05-17,Germany,Canada,3,1,Germany,1935,1781,9,24,CONMEBOL Qualifiers
+2019-05-20,Costa Rica,United States,2,0,Costa Rica,1731,1833,30,13,Africa Cup of Nations
+2019-05-22,Ivory Coast,France,0,0,,1706,2033,25,2,CONMEBOL Qualifiers
+2019-05-24,Belgium,England,2,1,Belgium,1917,1990,4,3,UEFA Nations League
+2019-05-26,Cameroon,Brazil,0,1,Brazil,1755,2017,28,5,CONMEBOL Qualifiers
+2019-06-01,Spain,Wales,0,1,Wales,1902,1681,8,29,World Cup
+2019-06-04,Germany,Ghana,1,1,Germany,1987,1687,9,27,UEFA Nations League
+2019-06-06,Iran,Ecuador,3,0,Iran,1695,1792,33,20,Friendly
+2019-06-07,Egypt,England,0,3,England,1791,1957,27,3,World Cup
+2019-06-08,Austria,Portugal,0,3,Portugal,1779,1966,21,6,Copa America
+2019-06-09,Colombia,Scotland,3,1,Colombia,1942,1761,11,26,CONMEBOL Qualifiers
+2019-06-12,Brazil,France,2,3,Brazil,1908,1970,5,2,Copa America
+2019-06-16,Austria,South Korea,1,1,Austria,1773,1797,21,21,Africa Cup of Nations
+2019-06-16,Morocco,Saudi Arabia,0,1,Saudi Arabia,1773,1666,16,32,Copa America
+2019-06-20,Algeria,Cameroon,0,2,Cameroon,1781,1705,28,28,CONMEBOL Qualifiers
+2019-06-20,Sweden,Serbia,2,0,Sweden,1819,1745,23,25,Africa Cup of Nations
+2019-06-21,Japan,Mexico,1,0,Japan,1845,1871,17,14,CONMEBOL Qualifiers
+2019-06-22,Ecuador,Croatia,2,3,Ecuador,1771,1869,20,15,UEFA Nations League
+2019-06-25,Wales,Costa Rica,2,0,Wales,1660,1694,29,30,CONMEBOL Qualifiers
+2019-06-26,Argentina,Switzerland,1,1,Argentina,2134,1740,1,22,Africa Cup of Nations
+2019-06-26,Switzerland,Brazil,2,1,Switzerland,1790,1930,22,5,Africa Cup of Nations
+2019-06-29,Serbia,Wales,3,1,Serbia,1811,1777,25,29,FIFA World Cup Qualifiers
+2019-07-03,Poland,Croatia,1,2,Poland,1804,1873,26,15,Africa Cup of Nations
+2019-07-05,Scotland,Chile,2,1,Scotland,1728,1849,26,22,CONMEBOL Qualifiers
+2019-07-09,Portugal,Iran,0,1,Iran,1909,1633,6,33,Gold Cup
+2019-07-14,Costa Rica,Chile,0,3,Chile,1658,1779,30,22,Copa America
+2019-07-16,United States,Austria,1,2,United States,1855,1791,13,21,FIFA World Cup Qualifiers
+2019-07-17,Ecuador,Scotland,0,0,,1834,1774,20,26,World Cup
+2019-07-19,Italy,Canada,2,3,Italy,1908,1728,12,24,Gold Cup
+2019-07-23,Germany,England,2,2,Germany,1906,2027,9,3,Africa Cup of Nations
+2019-07-27,Spain,Turkey,1,0,Spain,1973,1799,8,20,Friendly
+2019-07-30,Cameroon,Iran,0,1,Iran,1711,1621,28,33,Africa Cup of Nations
+2019-08-02,Egypt,Nigeria,4,1,Egypt,1781,1728,27,26,World Cup
+2019-08-06,Spain,Egypt,2,1,Spain,1908,1767,8,27,Copa America
+2019-08-07,Mexico,Australia,3,1,Mexico,1807,1772,14,23,UEFA Nations League
+2019-08-09,Ecuador,Germany,3,0,Ecuador,1788,1969,20,9,Copa America
+2019-08-18,Ecuador,Nigeria,1,1,Ecuador,1856,1712,20,26,UEFA Nations League
+2019-08-20,England,South Korea,0,0,,2011,1737,3,21,Friendly
+2019-08-21,Colombia,Australia,2,0,Colombia,1908,1825,11,23,Africa Cup of Nations
+2019-08-22,Wales,Colombia,2,0,Wales,1682,1902,29,11,Africa Cup of Nations
+2019-08-29,Cameroon,Portugal,1,0,Cameroon,1757,1950,28,6,CONMEBOL Qualifiers
+2019-08-29,Colombia,Nigeria,1,0,Colombia,1910,1787,11,26,Friendly
+2019-09-01,Chile,Japan,2,1,Chile,1799,1874,22,17,FIFA World Cup Qualifiers
+2019-09-05,Argentina,Sweden,1,1,Argentina,2105,1786,1,23,UEFA Nations League
+2019-09-05,Wales,Sweden,4,0,Wales,1660,1835,29,23,Gold Cup
+2019-09-05,Senegal,Morocco,3,2,Senegal,1826,1825,18,16,Africa Cup of Nations
+2019-09-07,England,Argentina,2,0,England,1941,2035,3,1,UEFA Nations League
+2019-09-07,Serbia,Chile,5,2,Serbia,1748,1735,25,22,UEFA Nations League
+2019-09-08,Switzerland,Netherlands,0,2,Netherlands,1796,1976,22,7,FIFA World Cup Qualifiers
+2019-09-10,Senegal,Germany,0,1,Germany,1846,1926,18,9,World Cup
+2019-09-17,South Korea,Saudi Arabia,4,0,South Korea,1787,1662,21,32,FIFA World Cup Qualifiers
+2019-09-18,South Korea,Egypt,3,1,South Korea,1740,1702,21,27,Friendly
+2019-09-19,Ivory Coast,Uruguay,1,1,Ivory Coast,1730,1863,25,10,Copa America
+2019-09-23,Portugal,Croatia,3,0,Portugal,2002,1891,6,15,Africa Cup of Nations
+2019-09-24,Algeria,Ecuador,1,0,Algeria,1753,1808,28,20,UEFA Nations League
+2019-09-24,Ghana,Saudi Arabia,2,2,Ghana,1697,1701,27,32,Gold Cup
+2019-09-26,Denmark,Austria,2,1,Denmark,1789,1785,19,21,Africa Cup of Nations
+2019-09-27,Morocco,Argentina,2,0,Morocco,1775,2104,16,1,FIFA World Cup Qualifiers
+2019-10-04,Japan,Scotland,1,1,Japan,1770,1710,17,26,World Cup
+2019-10-06,England,Morocco,1,1,England,2028,1837,3,16,World Cup
+2019-10-10,Japan,Scotland,0,0,,1761,1805,17,26,Copa America
+2019-10-14,Sweden,Iran,2,1,Sweden,1774,1716,23,33,Africa Cup of Nations
+2019-10-15,South Korea,Nigeria,2,2,South Korea,1758,1718,21,26,Gold Cup
+2019-10-15,Colombia,South Korea,0,1,South Korea,1949,1803,11,21,Africa Cup of Nations
+2019-10-16,Tunisia,Nigeria,0,0,,1675,1793,31,26,Copa America
+2019-10-18,Algeria,Belgium,2,1,Algeria,1684,1990,28,4,World Cup
+2019-10-19,Costa Rica,Senegal,0,3,Senegal,1751,1861,30,18,Copa America
+2019-10-22,Ivory Coast,Ghana,1,1,Ivory Coast,1702,1711,25,27,UEFA Nations League
+2019-10-25,Germany,Scotland,0,2,Scotland,1885,1785,9,26,Copa America
+2019-10-26,Algeria,Sweden,1,1,Algeria,1748,1771,28,23,FIFA World Cup Qualifiers
+2019-11-03,Portugal,Japan,1,1,Portugal,1936,1848,6,17,Copa America
+2019-11-05,Spain,France,0,0,,1988,1988,8,2,Friendly
+2019-11-06,Ghana,Saudi Arabia,1,2,Ghana,1741,1647,27,32,Gold Cup
+2019-11-07,Austria,Sweden,0,0,,1854,1781,21,23,Gold Cup
+2019-11-09,Colombia,Senegal,0,0,,1841,1838,11,18,World Cup
+2019-11-10,Austria,Serbia,1,0,Austria,1759,1720,21,25,Africa Cup of Nations
+2019-11-11,Portugal,Poland,3,1,Portugal,1941,1754,6,26,UEFA Nations League
+2019-11-13,Wales,Poland,2,1,Wales,1773,1728,29,26,Gold Cup
+2019-11-17,Wales,Canada,0,0,,1755,1785,29,24,UEFA Nations League
+2019-11-22,Algeria,Belgium,0,2,Belgium,1675,1962,28,4,UEFA Nations League
+2019-11-27,Mexico,Iran,4,2,Mexico,1840,1711,14,33,Copa America
+2019-12-02,Scotland,Senegal,0,1,Senegal,1779,1874,26,18,Friendly
+2019-12-08,Sweden,Poland,0,2,Poland,1795,1704,23,26,CONMEBOL Qualifiers
+2019-12-09,South Korea,Germany,4,0,South Korea,1779,1980,21,9,Africa Cup of Nations
+2019-12-11,Cameroon,Italy,0,0,,1732,1901,28,12,UEFA Nations League
+2019-12-15,Argentina,Australia,1,1,Argentina,2131,1820,1,23,CONMEBOL Qualifiers
+2019-12-16,Ghana,Spain,2,2,Ghana,1724,1991,27,8,CONMEBOL Qualifiers
+2019-12-17,Tunisia,Egypt,1,1,Tunisia,1634,1749,31,27,Africa Cup of Nations
+2019-12-19,Sweden,Ivory Coast,0,0,,1786,1736,23,25,Africa Cup of Nations
+2019-12-20,Argentina,Switzerland,2,0,Argentina,2131,1762,1,22,Gold Cup
+2019-12-21,Japan,Denmark,2,1,Japan,1801,1765,17,19,UEFA Nations League
+2019-12-22,Egypt,England,1,1,Egypt,1801,2027,27,3,World Cup
+2019-12-23,Peru,Serbia,1,0,Peru,1745,1819,25,25,Friendly
+2019-12-26,South Korea,Italy,3,1,South Korea,1829,1830,21,12,FIFA World Cup Qualifiers
+2019-12-27,Chile,Cameroon,1,2,Chile,1837,1744,22,28,UEFA Nations League
+2019-12-27,Egypt,Senegal,0,3,Senegal,1755,1811,27,18,Africa Cup of Nations
+2019-12-28,Argentina,Switzerland,1,1,Argentina,2147,1803,1,22,FIFA World Cup Qualifiers
+2019-12-28,Nigeria,Iran,3,0,Nigeria,1782,1663,26,33,Africa Cup of Nations
+2019-12-30,Sweden,Denmark,0,2,Denmark,1807,1794,23,19,FIFA World Cup Qualifiers
+2020-01-02,Portugal,Poland,0,0,,1981,1785,6,26,Africa Cup of Nations
+2020-01-05,Morocco,Colombia,2,0,Morocco,1872,1933,16,11,FIFA World Cup Qualifiers
+2020-01-05,France,Iran,1,0,France,2049,1699,2,33,Copa America
+2020-01-09,Ivory Coast,Scotland,1,0,Ivory Coast,1754,1755,25,26,Friendly
+2020-01-18,Ivory Coast,Egypt,1,3,Ivory Coast,1803,1719,25,27,UEFA Nations League
+2020-02-06,Saudi Arabia,France,1,1,Saudi Arabia,1668,2032,32,2,CONMEBOL Qualifiers
+2020-02-07,Denmark,Cameroon,1,1,Denmark,1750,1748,19,28,Copa America
+2020-02-11,Costa Rica,Turkey,0,2,Turkey,1710,1851,30,20,FIFA World Cup Qualifiers
+2020-02-12,Switzerland,Chile,0,0,,1822,1799,22,22,Friendly
+2020-02-16,Mexico,Nigeria,0,0,,1792,1707,14,26,Friendly
+2020-02-17,England,Chile,0,0,,1959,1796,3,22,CONMEBOL Qualifiers
+2020-02-17,Denmark,Japan,2,1,Denmark,1866,1813,19,17,FIFA World Cup Qualifiers
+2020-02-18,South Korea,Australia,2,1,South Korea,1757,1834,21,23,Africa Cup of Nations
+2020-02-18,Australia,South Korea,3,1,Australia,1775,1807,23,21,CONMEBOL Qualifiers
+2020-02-19,Wales,Iran,1,0,Wales,1663,1712,29,33,FIFA World Cup Qualifiers
+2020-02-24,England,Germany,1,3,England,1932,1981,3,9,Copa America
+2020-03-03,Turkey,Egypt,1,4,Turkey,1844,1762,20,27,CONMEBOL Qualifiers
+2020-03-05,Croatia,Egypt,1,0,Croatia,1805,1724,15,27,FIFA World Cup Qualifiers
+2020-03-14,Germany,Tunisia,0,0,,1941,1655,9,31,Friendly
+2020-03-18,Peru,Netherlands,0,1,Netherlands,1802,2001,25,7,Africa Cup of Nations
+2020-03-18,England,Cameroon,1,0,England,1910,1736,3,28,FIFA World Cup Qualifiers
+2020-03-19,Ivory Coast,Chile,1,2,Ivory Coast,1709,1767,25,22,Africa Cup of Nations
+2020-03-21,Costa Rica,Brazil,0,2,Brazil,1727,1929,30,5,Gold Cup
+2020-03-25,Iran,Netherlands,0,1,Netherlands,1721,1970,33,7,UEFA Nations League
+2020-03-29,South Korea,Serbia,0,2,Serbia,1765,1804,21,25,UEFA Nations League
+2020-04-01,France,Peru,1,1,France,2042,1739,2,25,Friendly
+2020-04-02,Chile,South Korea,0,1,South Korea,1821,1824,22,21,Friendly
+2020-04-02,Germany,Nigeria,1,2,Germany,1982,1767,9,26,World Cup
+2020-04-02,Cameroon,Ivory Coast,1,2,Cameroon,1746,1717,28,25,Africa Cup of Nations
+2020-04-03,Algeria,Italy,1,0,Algeria,1776,1866,28,12,UEFA Nations League
+2020-04-07,Mexico,Nigeria,3,2,Mexico,1818,1717,14,26,Copa America
+2020-04-07,Ghana,South Korea,1,4,Ghana,1737,1733,27,21,Africa Cup of Nations
+2020-04-08,Egypt,Germany,1,3,Egypt,1711,1953,27,9,UEFA Nations League
+2020-04-10,United States,Morocco,2,0,United States,1884,1800,13,16,Friendly
+2020-04-20,Argentina,Scotland,4,0,Argentina,2078,1798,1,26,Friendly
+2020-04-26,Colombia,Peru,3,0,Colombia,1929,1727,11,25,CONMEBOL Qualifiers
+2020-04-27,Brazil,Ghana,1,0,Brazil,1952,1722,5,27,Gold Cup
+2020-04-28,Morocco,Germany,1,1,Morocco,1870,1942,16,9,Friendly
+2020-04-29,United States,Argentina,1,0,United States,1805,2033,13,1,Gold Cup
+2020-04-30,Australia,Ghana,0,0,,1757,1700,23,27,Africa Cup of Nations
+2020-04-30,Wales,Costa Rica,1,1,Wales,1700,1692,29,30,Africa Cup of Nations
+2020-05-01,Peru,Sweden,0,2,Sweden,1707,1798,25,23,Friendly
+2020-05-04,Canada,Croatia,3,0,Canada,1787,1866,24,15,Africa Cup of Nations
+2020-05-06,Spain,Senegal,1,0,Spain,1922,1822,8,18,World Cup
+2020-05-12,Spain,Netherlands,1,1,Spain,1975,1960,8,7,FIFA World Cup Qualifiers
+2020-05-12,Senegal,Tunisia,0,0,,1833,1673,18,31,Gold Cup
+2020-05-13,Spain,Nigeria,1,0,Spain,1938,1735,8,26,Gold Cup
+2020-05-13,Ghana,Switzerland,2,1,Ghana,1772,1739,27,22,UEFA Nations League
+2020-05-15,England,Croatia,1,2,England,1960,1851,3,15,UEFA Nations League
+2020-05-17,Switzerland,Spain,1,1,Switzerland,1764,1937,22,8,Friendly
+2020-05-21,Iran,Algeria,1,0,Iran,1613,1779,33,28,World Cup
+2020-05-22,Nigeria,Peru,1,0,Nigeria,1696,1778,26,25,UEFA Nations League
+2020-05-30,Costa Rica,Iran,2,3,Costa Rica,1717,1665,30,33,Gold Cup
+2020-06-11,Tunisia,Algeria,2,0,Tunisia,1668,1700,31,28,Copa America
+2020-06-11,France,Sweden,2,1,France,1964,1750,2,23,Africa Cup of Nations
+2020-06-13,Costa Rica,Austria,1,1,Costa Rica,1687,1793,30,21,Friendly
+2020-06-18,Colombia,Costa Rica,0,3,Costa Rica,1878,1674,11,30,FIFA World Cup Qualifiers
+2020-06-19,Serbia,Poland,0,2,Poland,1805,1774,25,26,UEFA Nations League
+2020-06-23,Peru,England,0,2,England,1723,1987,25,3,Copa America
+2020-06-28,Senegal,Wales,0,1,Wales,1870,1725,18,29,Africa Cup of Nations
+2020-07-01,Spain,Italy,0,0,,1948,1870,8,12,World Cup
+2020-07-03,Italy,Chile,1,3,Italy,1908,1843,12,22,UEFA Nations League
+2020-07-07,Egypt,England,1,3,Egypt,1730,2014,27,3,Gold Cup
+2020-07-08,England,Chile,0,1,Chile,2012,1846,3,22,FIFA World Cup Qualifiers
+2020-07-12,Uruguay,Ecuador,3,2,Uruguay,1898,1763,10,20,CONMEBOL Qualifiers
+2020-07-12,United States,Sweden,1,1,United States,1901,1819,13,23,FIFA World Cup Qualifiers
+2020-07-12,Serbia,Australia,1,1,Serbia,1769,1768,25,23,UEFA Nations League
+2020-07-12,Spain,Nigeria,5,1,Spain,1899,1733,8,26,FIFA World Cup Qualifiers
+2020-07-14,Poland,Portugal,1,1,Poland,1737,1946,26,6,CONMEBOL Qualifiers
+2020-07-15,Nigeria,United States,5,1,Nigeria,1697,1876,26,13,FIFA World Cup Qualifiers
+2020-07-20,Scotland,Australia,0,0,,1793,1789,26,23,World Cup
+2020-07-25,Poland,Senegal,0,1,Senegal,1747,1778,26,18,Copa America
+2020-07-30,Japan,Brazil,2,2,Japan,1808,1981,17,5,FIFA World Cup Qualifiers
+2020-08-04,Portugal,Iran,2,0,Portugal,1904,1702,6,33,Africa Cup of Nations
+2020-08-05,Brazil,Scotland,2,0,Brazil,1906,1787,5,26,Copa America
+2020-08-06,Ghana,Saudi Arabia,2,0,Ghana,1687,1638,27,32,Gold Cup
+2020-08-11,Nigeria,Algeria,5,1,Nigeria,1758,1738,26,28,CONMEBOL Qualifiers
+2020-08-11,Brazil,England,1,0,Brazil,1984,1939,5,3,Copa America
+2020-08-19,Germany,England,1,0,Germany,1874,1948,9,3,UEFA Nations League
+2020-08-20,Denmark,Iran,4,0,Denmark,1834,1691,19,33,CONMEBOL Qualifiers
+2020-08-23,Serbia,Nigeria,1,1,Serbia,1753,1763,25,26,Africa Cup of Nations
+2020-08-24,Uruguay,Austria,3,1,Uruguay,1936,1840,10,21,FIFA World Cup Qualifiers
+2020-08-25,Ecuador,Turkey,0,1,Turkey,1832,1823,20,20,World Cup
+2020-08-26,Belgium,Ivory Coast,4,0,Belgium,1974,1807,4,25,UEFA Nations League
+2020-09-12,Scotland,Ghana,1,3,Scotland,1768,1778,26,27,Friendly
+2020-09-15,Austria,Senegal,0,3,Senegal,1811,1756,21,18,Gold Cup
+2020-09-17,Costa Rica,Iran,2,0,Costa Rica,1690,1691,30,33,FIFA World Cup Qualifiers
+2020-09-17,Spain,Saudi Arabia,0,3,Saudi Arabia,1956,1688,8,32,UEFA Nations League
+2020-09-20,Canada,United States,3,0,Canada,1747,1862,24,13,Africa Cup of Nations
+2020-09-21,Argentina,Denmark,1,1,Argentina,2082,1799,1,19,UEFA Nations League
+2020-09-25,Scotland,Australia,4,0,Scotland,1747,1750,26,23,World Cup
+2020-09-30,Saudi Arabia,Algeria,0,2,Algeria,1689,1712,32,28,Gold Cup
+2020-10-01,Canada,Turkey,0,2,Turkey,1773,1848,24,20,UEFA Nations League
+2020-10-03,Senegal,Wales,3,1,Senegal,1868,1679,18,29,CONMEBOL Qualifiers
+2020-10-03,Nigeria,Netherlands,0,1,Netherlands,1752,1948,26,7,Gold Cup
+2020-10-06,Italy,Turkey,3,2,Italy,1904,1798,12,20,Copa America
+2020-10-07,Wales,Sweden,1,1,Wales,1722,1808,29,23,Gold Cup
+2020-10-09,Ivory Coast,Brazil,1,1,Ivory Coast,1799,1983,25,5,Friendly
+2020-10-10,Wales,Egypt,3,2,Wales,1687,1739,29,27,CONMEBOL Qualifiers
+2020-10-13,Ghana,Australia,2,2,Ghana,1746,1788,27,23,CONMEBOL Qualifiers
+2020-10-17,Croatia,Italy,1,0,Croatia,1877,1909,15,12,Copa America
+2020-10-20,Netherlands,England,6,3,Netherlands,1948,1955,7,3,Friendly
+2020-10-21,Wales,Australia,0,0,,1735,1758,29,23,Africa Cup of Nations
+2020-10-22,Wales,Portugal,3,1,Wales,1736,1900,29,6,World Cup
+2020-10-23,Denmark,Croatia,1,0,Denmark,1827,1877,19,15,UEFA Nations League
+2020-10-27,Cameroon,Senegal,0,1,Senegal,1723,1793,28,18,Friendly
+2020-11-02,Algeria,Italy,0,1,Italy,1690,1935,28,12,World Cup
+2020-11-06,Austria,Morocco,2,1,Austria,1812,1839,21,16,FIFA World Cup Qualifiers
+2020-11-06,Sweden,Morocco,0,0,,1783,1886,23,16,Africa Cup of Nations
+2020-11-10,Serbia,England,1,0,Serbia,1754,1945,25,3,World Cup
+2020-11-14,England,Peru,0,3,Peru,1992,1807,3,25,World Cup
+2020-11-16,Denmark,England,0,1,England,1786,2001,19,3,Africa Cup of Nations
+2020-11-19,Senegal,United States,0,0,,1858,1804,18,13,UEFA Nations League
+2020-11-23,Algeria,Iran,1,0,Algeria,1680,1724,28,33,UEFA Nations League
+2020-11-27,Colombia,Saudi Arabia,2,0,Colombia,1874,1686,11,32,UEFA Nations League
+2020-11-30,Egypt,Croatia,2,1,Egypt,1788,1786,27,15,UEFA Nations League
+2020-12-05,Croatia,Austria,0,4,Austria,1799,1798,15,21,UEFA Nations League
+2020-12-05,Wales,Brazil,2,1,Wales,1762,2008,29,5,Copa America
+2020-12-09,Portugal,Poland,0,0,,1896,1723,6,26,Gold Cup
+2020-12-12,Turkey,Netherlands,1,1,Turkey,1791,1936,20,7,Friendly
+2020-12-13,Denmark,Spain,0,1,Spain,1850,1893,19,8,Friendly
+2020-12-14,Ivory Coast,Switzerland,1,1,Ivory Coast,1714,1762,25,22,UEFA Nations League
+2020-12-18,Italy,Costa Rica,2,2,Italy,1936,1708,12,30,Africa Cup of Nations
+2020-12-21,Egypt,Germany,0,2,Germany,1701,1954,27,9,Gold Cup
+2020-12-22,Colombia,Belgium,0,0,,1842,1947,11,4,CONMEBOL Qualifiers
+2020-12-27,England,Switzerland,1,1,England,1920,1832,3,22,Gold Cup
+2020-12-29,South Korea,Morocco,1,1,South Korea,1730,1803,21,16,FIFA World Cup Qualifiers
+2020-12-29,United States,Netherlands,3,0,United States,1806,1913,13,7,Friendly
+2020-12-31,Austria,Egypt,3,3,Austria,1761,1726,21,27,Copa America
+2021-01-03,Germany,Scotland,4,1,Germany,1952,1711,9,26,Copa America
+2021-01-05,Poland,Switzerland,0,2,Switzerland,1778,1755,26,22,FIFA World Cup Qualifiers
+2021-01-08,Croatia,Germany,2,1,Croatia,1813,1965,15,9,Gold Cup
+2021-01-09,Canada,Netherlands,1,2,Canada,1721,1890,24,7,Copa America
+2021-01-17,Algeria,Morocco,0,2,Morocco,1710,1826,28,16,FIFA World Cup Qualifiers
+2021-01-17,Mexico,United States,2,2,Mexico,1885,1858,14,13,UEFA Nations League
+2021-01-18,South Korea,Poland,1,2,South Korea,1819,1796,21,26,Friendly
+2021-01-18,Canada,Switzerland,1,3,Canada,1733,1739,24,22,Gold Cup
+2021-01-18,Croatia,Japan,2,0,Croatia,1785,1814,15,17,CONMEBOL Qualifiers
+2021-01-21,Denmark,Senegal,3,0,Denmark,1818,1795,19,18,UEFA Nations League
+2021-01-23,Senegal,Wales,2,0,Senegal,1839,1714,18,29,Friendly
+2021-01-25,Ivory Coast,South Korea,2,1,Ivory Coast,1713,1820,25,21,CONMEBOL Qualifiers
+2021-01-25,Mexico,Saudi Arabia,1,1,Mexico,1820,1681,14,32,CONMEBOL Qualifiers
+2021-01-26,France,South Korea,2,1,France,2057,1782,2,21,UEFA Nations League
+2021-01-27,Morocco,England,2,2,Morocco,1828,1916,16,3,FIFA World Cup Qualifiers
+2021-01-29,Nigeria,Denmark,3,2,Nigeria,1803,1760,26,19,UEFA Nations League
+2021-01-30,Egypt,England,0,3,England,1793,1971,27,3,Africa Cup of Nations
+2021-01-30,France,Argentina,3,1,France,2013,2100,2,1,CONMEBOL Qualifiers
+2021-02-03,Australia,Algeria,1,1,Australia,1758,1705,23,28,World Cup
+2021-02-04,Ecuador,Argentina,2,1,Ecuador,1778,2058,20,1,UEFA Nations League
+2021-02-05,South Korea,Brazil,2,2,South Korea,1741,1949,21,5,Africa Cup of Nations
+2021-02-09,Croatia,Switzerland,4,0,Croatia,1874,1743,15,22,UEFA Nations League
+2021-02-13,Colombia,Brazil,2,1,Colombia,1926,1962,11,5,World Cup
+2021-02-14,Wales,Turkey,1,3,Wales,1714,1799,29,20,Copa America
+2021-02-15,Wales,Brazil,2,4,Wales,1733,1917,29,5,Friendly
+2021-02-15,Croatia,Netherlands,2,2,Croatia,1819,1998,15,7,Friendly
+2021-02-19,Ghana,Ivory Coast,2,0,Ghana,1692,1806,27,25,World Cup
+2021-02-22,Mexico,Peru,4,2,Mexico,1840,1734,14,25,World Cup
+2021-02-23,Ecuador,Saudi Arabia,2,1,Ecuador,1810,1633,20,32,UEFA Nations League
+2021-02-24,Serbia,Senegal,1,1,Serbia,1723,1758,25,18,World Cup
+2021-02-27,Iran,Netherlands,2,2,Iran,1647,1990,33,7,Africa Cup of Nations
+2021-03-04,South Korea,Serbia,4,2,South Korea,1847,1801,21,25,World Cup
+2021-03-05,Austria,Mexico,0,1,Mexico,1790,1897,21,14,Gold Cup
+2021-03-06,Germany,Japan,1,2,Germany,1931,1858,9,17,Gold Cup
+2021-03-06,Egypt,Australia,4,2,Egypt,1755,1760,27,23,Friendly
+2021-03-07,Nigeria,Poland,1,1,Nigeria,1771,1762,26,26,Copa America
+2021-03-10,Portugal,Belgium,1,1,Portugal,1908,1958,6,4,UEFA Nations League
+2021-03-11,Argentina,Ecuador,4,3,Argentina,2102,1817,1,20,Africa Cup of Nations
+2021-03-13,Senegal,Ivory Coast,0,3,Ivory Coast,1765,1731,18,25,World Cup
+2021-03-13,England,Ghana,1,0,England,1956,1766,3,27,Africa Cup of Nations
+2021-03-17,Wales,Argentina,1,0,Wales,1685,2138,29,1,Friendly
+2021-03-22,Netherlands,Peru,0,1,Peru,1983,1780,7,25,Gold Cup
+2021-03-24,Belgium,Morocco,2,1,Belgium,1984,1888,4,16,World Cup
+2021-03-26,Ghana,Wales,1,0,Ghana,1768,1736,27,29,CONMEBOL Qualifiers
+2021-03-28,Belgium,Colombia,1,1,Belgium,2006,1869,4,11,Africa Cup of Nations
+2021-03-28,Canada,England,2,1,Canada,1761,1916,24,3,Copa America
+2021-03-31,Poland,Saudi Arabia,2,0,Poland,1713,1739,26,32,World Cup
+2021-04-08,Chile,France,2,0,Chile,1823,2004,22,2,Copa America
+2021-04-09,Turkey,Peru,3,1,Turkey,1757,1755,20,25,CONMEBOL Qualifiers
+2021-04-18,Portugal,Cameroon,0,0,,1905,1725,6,28,FIFA World Cup Qualifiers
+2021-04-19,Ecuador,Ghana,1,2,Ecuador,1840,1793,20,27,Africa Cup of Nations
+2021-04-23,Colombia,Japan,2,0,Colombia,1946,1865,11,17,FIFA World Cup Qualifiers
+2021-04-23,Senegal,Colombia,1,0,Senegal,1791,1917,18,11,Friendly
+2021-04-26,Switzerland,Saudi Arabia,0,2,Saudi Arabia,1749,1648,22,32,Copa America
+2021-04-29,Nigeria,Canada,2,1,Nigeria,1760,1812,26,24,Friendly
+2021-05-04,United States,Morocco,1,0,United States,1825,1841,13,16,CONMEBOL Qualifiers
+2021-05-07,Uruguay,Belgium,2,1,Uruguay,1933,1949,10,4,FIFA World Cup Qualifiers
+2021-05-11,Netherlands,Algeria,2,1,Netherlands,1980,1786,7,28,World Cup
+2021-05-13,South Korea,Scotland,6,1,South Korea,1774,1780,21,26,UEFA Nations League
+2021-05-14,Tunisia,Netherlands,0,2,Netherlands,1686,1982,31,7,World Cup
+2021-05-17,Ghana,Scotland,5,0,Ghana,1800,1738,27,26,Gold Cup
+2021-05-20,United States,Brazil,3,1,United States,1865,1988,13,5,Copa America
+2021-05-22,Cameroon,Serbia,1,1,Cameroon,1779,1744,28,25,Gold Cup
+2021-05-25,Algeria,South Korea,1,2,Algeria,1694,1786,28,21,CONMEBOL Qualifiers
+2021-05-29,Belgium,Sweden,1,2,Belgium,1939,1787,4,23,Copa America
+2021-05-31,Ecuador,Costa Rica,2,2,Ecuador,1773,1749,20,30,World Cup
+2021-06-01,Algeria,Saudi Arabia,1,2,Algeria,1751,1698,28,32,World Cup
+2021-06-04,Sweden,Turkey,1,1,Sweden,1730,1836,23,20,Copa America
+2021-06-04,England,Tunisia,3,1,England,1938,1655,3,31,Friendly
+2021-06-05,Germany,Ivory Coast,1,0,Germany,1892,1776,9,25,CONMEBOL Qualifiers
+2021-06-13,France,Spain,0,2,Spain,2063,1926,2,8,Friendly
+2021-06-16,Peru,Austria,1,4,Peru,1749,1763,25,21,FIFA World Cup Qualifiers
+2021-06-24,Morocco,Cameroon,1,0,Morocco,1845,1721,16,28,FIFA World Cup Qualifiers
+2021-06-24,Denmark,United States,0,1,United States,1755,1891,19,13,Gold Cup
+2021-06-27,Scotland,Spain,1,3,Scotland,1749,1919,26,8,Copa America
+2021-06-28,Nigeria,Canada,2,1,Nigeria,1800,1717,26,24,Gold Cup
+2021-06-30,Nigeria,Mexico,1,3,Nigeria,1743,1833,26,14,FIFA World Cup Qualifiers
+2021-07-02,Costa Rica,Netherlands,1,1,Costa Rica,1706,1975,30,7,FIFA World Cup Qualifiers
+2021-07-05,Netherlands,Tunisia,0,0,,1987,1737,7,31,Gold Cup
+2021-07-06,Poland,England,2,2,Poland,1745,1912,26,3,Gold Cup
+2021-07-07,Brazil,Croatia,0,0,,1949,1786,5,15,FIFA World Cup Qualifiers
+2021-07-07,Spain,Japan,2,1,Spain,1965,1870,8,17,Gold Cup
+2021-07-11,Saudi Arabia,Spain,1,0,Saudi Arabia,1733,1932,32,8,World Cup
+2021-07-16,Ghana,Belgium,0,3,Belgium,1786,1971,27,4,World Cup
+2021-07-23,Costa Rica,Germany,1,0,Costa Rica,1742,1929,30,9,Africa Cup of Nations
+2021-07-24,South Korea,Brazil,1,2,South Korea,1801,1968,21,5,UEFA Nations League
+2021-08-01,Saudi Arabia,Uruguay,1,2,Saudi Arabia,1662,1945,32,10,UEFA Nations League
+2021-08-06,Iran,Denmark,3,2,Iran,1639,1854,33,19,Friendly
+2021-08-12,Chile,Argentina,1,0,Chile,1768,2066,22,1,Africa Cup of Nations
+2021-08-14,Switzerland,Costa Rica,5,1,Switzerland,1815,1759,22,30,World Cup
+2021-08-15,Costa Rica,Turkey,1,4,Costa Rica,1686,1869,30,20,FIFA World Cup Qualifiers
+2021-08-19,Denmark,Japan,0,1,Japan,1851,1768,19,17,World Cup
+2021-08-20,Canada,Colombia,1,2,Canada,1779,1929,24,11,Africa Cup of Nations
+2021-08-21,France,Portugal,0,2,Portugal,1990,1965,2,6,Gold Cup
+2021-08-24,Ecuador,Netherlands,0,1,Netherlands,1801,1898,20,7,CONMEBOL Qualifiers
+2021-08-29,Brazil,Switzerland,1,0,Brazil,1977,1823,5,22,World Cup
+2021-08-31,Belgium,Ecuador,2,0,Belgium,1972,1745,4,20,Friendly
+2021-09-05,Tunisia,Nigeria,0,1,Nigeria,1688,1714,31,26,FIFA World Cup Qualifiers
+2021-09-05,Algeria,Canada,0,3,Canada,1688,1796,28,24,Friendly
+2021-09-10,Ghana,Morocco,1,2,Ghana,1753,1789,27,16,Africa Cup of Nations
+2021-09-18,Poland,Portugal,1,1,Poland,1734,1923,26,6,FIFA World Cup Qualifiers
+2021-09-18,Australia,Ivory Coast,0,0,,1785,1751,23,25,World Cup
+2021-09-20,Ecuador,Colombia,1,1,Ecuador,1812,1860,20,11,Gold Cup
+2021-09-23,Brazil,Australia,0,3,Australia,1930,1813,5,23,UEFA Nations League
+2021-09-25,United States,Turkey,1,1,United States,1882,1835,13,20,CONMEBOL Qualifiers
+2021-10-01,England,Peru,3,0,England,1958,1710,3,25,FIFA World Cup Qualifiers
+2021-10-02,Denmark,Serbia,0,1,Serbia,1802,1799,19,25,Copa America
+2021-10-04,Ivory Coast,Germany,0,2,Germany,1761,1889,25,9,Africa Cup of Nations
+2021-10-05,Canada,Croatia,1,1,Canada,1713,1815,24,15,UEFA Nations League
+2021-10-07,Algeria,Portugal,1,0,Algeria,1780,1985,28,6,Africa Cup of Nations
+2021-10-09,Wales,Morocco,1,1,Wales,1756,1829,29,16,World Cup
+2021-10-10,Brazil,Canada,0,0,,1990,1830,5,24,CONMEBOL Qualifiers
+2021-10-11,Iran,Egypt,0,0,,1716,1779,33,27,UEFA Nations League
+2021-10-13,Sweden,Denmark,1,0,Sweden,1779,1830,23,19,Gold Cup
+2021-10-17,Nigeria,Peru,2,0,Nigeria,1787,1772,26,25,Copa America
+2021-10-26,Saudi Arabia,South Korea,0,5,South Korea,1643,1792,32,21,CONMEBOL Qualifiers
+2021-11-04,Turkey,Italy,0,1,Italy,1829,1904,20,12,Africa Cup of Nations
+2021-11-05,Ghana,Austria,0,1,Austria,1797,1828,27,21,CONMEBOL Qualifiers
+2021-11-07,Austria,Tunisia,0,1,Tunisia,1804,1649,21,31,Copa America
+2021-11-09,Ecuador,Argentina,3,1,Ecuador,1740,2096,20,1,CONMEBOL Qualifiers
+2021-11-10,Japan,Canada,0,0,,1806,1781,17,24,World Cup
+2021-11-11,Canada,Chile,0,0,,1781,1791,24,22,Gold Cup
+2021-11-12,Germany,South Korea,2,2,Germany,1952,1739,9,21,UEFA Nations League
+2021-11-14,Spain,Peru,4,1,Spain,1966,1769,8,25,UEFA Nations League
+2021-11-15,Mexico,Switzerland,3,1,Mexico,1857,1743,14,22,Gold Cup
+2021-11-23,Peru,Cameroon,0,1,Cameroon,1767,1751,25,28,Africa Cup of Nations
+2021-11-24,Chile,Denmark,0,1,Denmark,1822,1856,22,19,CONMEBOL Qualifiers
+2021-11-25,Chile,Denmark,0,1,Denmark,1799,1839,22,19,FIFA World Cup Qualifiers
+2021-12-03,Saudi Arabia,Austria,2,0,Saudi Arabia,1677,1762,32,21,FIFA World Cup Qualifiers
+2021-12-04,Portugal,Tunisia,0,0,,1897,1725,6,31,Friendly
+2021-12-07,Sweden,Germany,1,1,Sweden,1820,1896,23,9,CONMEBOL Qualifiers
+2021-12-08,France,Italy,0,1,Italy,1979,1909,2,12,World Cup
+2021-12-12,Chile,Nigeria,3,2,Chile,1774,1749,22,26,Africa Cup of Nations
+2021-12-13,Japan,Saudi Arabia,1,2,Japan,1852,1702,17,32,UEFA Nations League
+2021-12-19,Mexico,Peru,5,1,Mexico,1867,1742,14,25,Copa America
+2021-12-21,Serbia,Egypt,1,3,Serbia,1790,1714,25,27,Copa America
+2021-12-22,Netherlands,Nigeria,2,2,Netherlands,1909,1725,7,26,CONMEBOL Qualifiers
+2021-12-25,Wales,Spain,2,4,Wales,1672,1977,29,8,CONMEBOL Qualifiers
+2021-12-26,Serbia,Senegal,1,1,Serbia,1758,1836,25,18,Friendly
+2021-12-26,Chile,Italy,2,1,Chile,1817,1935,22,12,Friendly
+2022-01-02,Egypt,Tunisia,1,0,Egypt,1717,1634,27,31,World Cup
+2022-01-05,Ecuador,Canada,3,1,Ecuador,1855,1829,20,24,Friendly
+2022-01-06,Algeria,Sweden,1,2,Algeria,1782,1804,28,23,Copa America
+2022-01-08,Croatia,Egypt,1,2,Croatia,1856,1785,15,27,CONMEBOL Qualifiers
+2022-01-10,Ecuador,United States,2,2,Ecuador,1789,1899,20,13,CONMEBOL Qualifiers
+2022-01-21,Egypt,Spain,1,0,Egypt,1803,1928,27,8,Friendly
+2022-01-31,Algeria,Iran,0,2,Iran,1723,1703,28,33,Friendly
+2022-02-06,Netherlands,Poland,1,0,Netherlands,1937,1791,7,26,UEFA Nations League
+2022-02-07,Egypt,Argentina,1,1,Egypt,1793,2043,27,1,Gold Cup
+2022-02-10,Germany,Mexico,4,1,Germany,1963,1782,9,14,World Cup
+2022-02-11,Chile,Iran,2,1,Chile,1744,1683,22,33,World Cup
+2022-02-15,Costa Rica,Iran,2,0,Costa Rica,1686,1617,30,33,UEFA Nations League
+2022-02-20,France,Portugal,3,1,France,1982,1923,2,6,Africa Cup of Nations
+2022-02-22,Australia,England,0,5,England,1748,2007,23,3,Friendly
+2022-02-28,Canada,Serbia,0,1,Serbia,1782,1704,24,25,FIFA World Cup Qualifiers
+2022-03-02,Saudi Arabia,Mexico,0,2,Mexico,1663,1833,32,14,Africa Cup of Nations
+2022-03-08,Morocco,Ghana,2,2,Morocco,1887,1772,16,27,Copa America
+2022-03-09,Poland,Egypt,0,0,,1727,1766,26,27,World Cup
+2022-03-11,Argentina,Cameroon,1,3,Argentina,2132,1707,1,28,Friendly
+2022-03-13,Turkey,Netherlands,3,0,Turkey,1750,1955,20,7,CONMEBOL Qualifiers
+2022-03-18,Algeria,Senegal,1,0,Algeria,1775,1812,28,18,Gold Cup
+2022-03-18,Ecuador,Netherlands,0,1,Netherlands,1814,1893,20,7,Gold Cup
+2022-03-24,Nigeria,Mexico,1,3,Nigeria,1766,1821,26,14,FIFA World Cup Qualifiers
+2022-04-02,Ivory Coast,Cameroon,0,0,,1717,1780,25,28,FIFA World Cup Qualifiers
+2022-04-03,France,Ecuador,0,1,Ecuador,2004,1826,2,20,Friendly
+2022-04-03,Portugal,Ivory Coast,4,2,Portugal,2004,1783,6,25,Gold Cup
+2022-04-08,Serbia,Turkey,4,0,Serbia,1789,1752,25,20,Africa Cup of Nations
+2022-04-11,Algeria,Cameroon,1,1,Algeria,1746,1733,28,28,FIFA World Cup Qualifiers
+2022-04-12,Brazil,Egypt,2,1,Brazil,1960,1708,5,27,World Cup
+2022-04-13,Algeria,Colombia,6,0,Algeria,1776,1917,28,11,Africa Cup of Nations
+2022-04-15,Croatia,Uruguay,0,3,Uruguay,1818,1964,15,10,Friendly
+2022-04-18,Saudi Arabia,Ghana,2,1,Saudi Arabia,1732,1750,32,27,UEFA Nations League
+2022-04-23,Portugal,Spain,1,0,Portugal,1985,1937,6,8,UEFA Nations League
+2022-04-24,Brazil,Japan,1,2,Brazil,1928,1807,5,17,Gold Cup
+2022-04-26,Cameroon,Scotland,1,2,Cameroon,1763,1721,28,26,UEFA Nations League
+2022-04-30,Ivory Coast,Belgium,1,1,Ivory Coast,1800,2019,25,4,Copa America
+2022-05-01,Australia,France,2,1,Australia,1773,1951,23,2,Copa America
+2022-05-03,Colombia,Japan,0,0,,1925,1866,11,17,World Cup
+2022-05-07,Ecuador,Poland,4,1,Ecuador,1800,1752,20,26,UEFA Nations League
+2022-05-07,Iran,Austria,2,2,Iran,1670,1831,33,21,Africa Cup of Nations
+2022-05-15,Portugal,Senegal,1,0,Portugal,1914,1803,6,18,FIFA World Cup Qualifiers
+2022-05-16,Ghana,Chile,3,0,Ghana,1735,1780,27,22,Gold Cup
+2022-05-24,Scotland,Ecuador,0,1,Ecuador,1716,1806,26,20,CONMEBOL Qualifiers
+2022-05-25,Portugal,Turkey,1,1,Portugal,1979,1768,6,20,UEFA Nations League
+2022-05-28,Morocco,Uruguay,0,0,,1861,1891,16,10,Africa Cup of Nations
+2022-05-29,Ghana,Netherlands,0,1,Netherlands,1712,1968,27,7,Friendly
+2022-05-30,Iran,Costa Rica,0,4,Costa Rica,1673,1752,33,30,Africa Cup of Nations
+2022-06-03,Poland,England,2,2,Poland,1767,2004,26,3,World Cup
+2022-06-04,Canada,Costa Rica,0,2,Costa Rica,1805,1650,24,30,Copa America
+2022-06-08,Croatia,South Korea,0,1,South Korea,1815,1813,15,21,CONMEBOL Qualifiers
+2022-06-12,Mexico,South Korea,0,0,,1798,1741,14,21,World Cup
+2022-06-16,Spain,Costa Rica,1,0,Spain,1889,1658,8,30,FIFA World Cup Qualifiers
+2022-06-20,Italy,South Korea,1,3,Italy,1822,1756,12,21,Copa America
+2022-06-23,Mexico,Egypt,0,0,,1876,1778,14,27,FIFA World Cup Qualifiers
+2022-06-25,Ghana,Algeria,3,0,Ghana,1753,1699,27,28,Friendly
+2022-06-25,Morocco,Ivory Coast,1,0,Morocco,1770,1720,16,25,FIFA World Cup Qualifiers
+2022-06-25,Morocco,Scotland,1,2,Morocco,1855,1735,16,26,FIFA World Cup Qualifiers
+2022-06-27,Ivory Coast,Switzerland,1,1,Ivory Coast,1734,1740,25,22,Africa Cup of Nations
+2022-07-01,Iran,Belgium,3,2,Iran,1632,1933,33,4,Copa America
+2022-07-04,England,Italy,1,0,England,1945,1871,3,12,World Cup
+2022-07-06,Iran,Denmark,2,3,Iran,1690,1841,33,19,Copa America
+2022-07-11,Switzerland,Saudi Arabia,1,1,Switzerland,1770,1716,22,32,World Cup
+2022-07-15,Saudi Arabia,Croatia,0,3,Croatia,1654,1830,32,15,UEFA Nations League
+2022-07-23,Morocco,Scotland,0,0,,1783,1735,16,26,UEFA Nations League
+2022-07-26,Austria,Ivory Coast,2,0,Austria,1751,1724,21,25,Africa Cup of Nations
+2022-07-28,Japan,Chile,5,0,Japan,1769,1803,17,22,Gold Cup
+2022-07-30,Germany,Portugal,4,0,Germany,1893,1950,9,6,Copa America
+2022-07-31,Ivory Coast,Brazil,1,2,Ivory Coast,1781,2005,25,5,Copa America
+2022-08-02,Nigeria,Argentina,0,1,Argentina,1743,2113,26,1,FIFA World Cup Qualifiers
+2022-08-05,Brazil,Ecuador,1,0,Brazil,1950,1831,5,20,Copa America
+2022-08-10,Mexico,Wales,1,0,Mexico,1857,1720,14,29,UEFA Nations League
+2022-08-14,Ghana,Switzerland,4,2,Ghana,1721,1810,27,22,Africa Cup of Nations
+2022-08-20,United States,Iran,1,0,United States,1805,1721,13,33,World Cup
+2022-08-23,Belgium,Serbia,2,2,Belgium,1961,1793,4,25,Africa Cup of Nations
+2022-08-28,Nigeria,Scotland,0,2,Scotland,1726,1762,26,26,Copa America
+2022-08-29,Turkey,Canada,2,0,Turkey,1843,1726,20,24,UEFA Nations League
+2022-08-31,Portugal,Costa Rica,1,2,Portugal,1997,1721,6,30,FIFA World Cup Qualifiers
+2022-09-01,Uruguay,Peru,2,0,Uruguay,1888,1710,10,25,Friendly
+2022-09-03,Portugal,England,0,0,,1977,2008,6,3,World Cup
+2022-09-06,Spain,Australia,1,1,Spain,1951,1781,8,23,CONMEBOL Qualifiers
+2022-09-07,England,Peru,3,2,England,2020,1728,3,25,CONMEBOL Qualifiers
+2022-09-09,Wales,Morocco,1,0,Wales,1678,1782,29,16,Friendly
+2022-09-12,England,Peru,3,0,England,1999,1714,3,25,UEFA Nations League
+2022-09-13,Serbia,Costa Rica,2,0,Serbia,1747,1725,25,30,UEFA Nations League
+2022-09-13,Argentina,Australia,0,2,Australia,2068,1816,1,23,Friendly
+2022-09-18,England,Denmark,3,1,England,1962,1773,3,19,FIFA World Cup Qualifiers
+2022-09-20,Tunisia,Uruguay,0,2,Uruguay,1656,1938,31,10,Copa America
+2022-09-23,Mexico,Costa Rica,0,2,Costa Rica,1821,1683,14,30,CONMEBOL Qualifiers
+2022-09-29,Scotland,Spain,3,1,Scotland,1742,1925,26,8,World Cup
+2022-09-29,Argentina,Serbia,2,0,Argentina,2063,1818,1,25,Africa Cup of Nations
+2022-10-01,Netherlands,Uruguay,2,0,Netherlands,1944,1933,7,10,FIFA World Cup Qualifiers
+2022-10-04,Algeria,Brazil,1,0,Algeria,1701,1985,28,5,Copa America
+2022-10-12,Netherlands,Portugal,1,2,Netherlands,1931,1979,7,6,UEFA Nations League
+2022-10-13,Costa Rica,Ivory Coast,0,1,Ivory Coast,1643,1707,30,25,Copa America
+2022-10-20,Mexico,Turkey,4,0,Mexico,1868,1794,14,20,UEFA Nations League
+2022-10-21,Japan,Germany,1,1,Japan,1791,1965,17,9,Gold Cup
+2022-10-23,Nigeria,Serbia,2,4,Nigeria,1752,1816,26,25,CONMEBOL Qualifiers
+2022-10-24,Saudi Arabia,Portugal,3,0,Saudi Arabia,1636,1973,32,6,Africa Cup of Nations
+2022-10-30,South Korea,Chile,1,0,South Korea,1771,1838,21,22,FIFA World Cup Qualifiers
+2022-11-01,Morocco,Tunisia,0,0,,1873,1682,16,31,FIFA World Cup Qualifiers
+2022-11-03,Tunisia,Scotland,2,0,Tunisia,1646,1805,31,26,Gold Cup
+2022-11-10,Switzerland,Spain,1,0,Switzerland,1730,2000,22,8,Gold Cup
+2022-11-12,Ecuador,Denmark,2,0,Ecuador,1798,1843,20,19,UEFA Nations League
+2022-11-15,Peru,Belgium,1,0,Peru,1770,1956,25,4,UEFA Nations League
+2022-11-17,Wales,Australia,1,0,Wales,1717,1725,29,23,CONMEBOL Qualifiers
+2022-11-18,Mexico,Egypt,1,3,Mexico,1886,1774,14,27,Copa America
+2022-11-19,Serbia,Algeria,1,1,Serbia,1700,1777,25,28,Copa America
+2022-11-22,South Korea,Cameroon,1,1,South Korea,1751,1670,21,28,CONMEBOL Qualifiers
+2022-11-24,Colombia,Sweden,4,0,Colombia,1888,1826,11,23,Copa America
+2022-11-26,Germany,Portugal,1,1,Germany,1934,1990,9,6,Friendly
+2022-11-30,Netherlands,Ghana,0,0,,2006,1755,7,27,UEFA Nations League
+2022-12-02,South Korea,Chile,2,0,South Korea,1830,1812,21,22,Friendly
+2022-12-05,Iran,Ivory Coast,1,0,Iran,1632,1705,33,25,UEFA Nations League
+2022-12-09,Poland,Switzerland,1,0,Poland,1797,1804,26,22,FIFA World Cup Qualifiers
+2022-12-11,Algeria,Netherlands,1,1,Algeria,1790,1970,28,7,World Cup
+2022-12-17,Peru,England,3,1,Peru,1797,2006,25,3,CONMEBOL Qualifiers
+2022-12-20,Italy,Chile,2,0,Italy,1871,1794,12,22,FIFA World Cup Qualifiers
+2022-12-21,Cameroon,Italy,1,5,Cameroon,1705,1879,28,12,Copa America
+2022-12-28,Argentina,Mexico,4,1,Argentina,2091,1789,1,14,World Cup
+2022-12-29,Spain,Germany,2,1,Spain,1989,1879,8,9,Copa America
+2022-12-30,Spain,Mexico,0,0,,1971,1854,8,14,World Cup
+2022-12-30,Canada,Germany,0,1,Germany,1796,1963,24,9,FIFA World Cup Qualifiers
+2023-01-02,Uruguay,Italy,0,2,Italy,1948,1911,10,12,CONMEBOL Qualifiers
+2023-01-12,Poland,Switzerland,2,0,Poland,1792,1835,26,22,UEFA Nations League
+2023-01-13,Italy,Algeria,1,0,Italy,1883,1734,12,28,FIFA World Cup Qualifiers
+2023-01-17,Serbia,Morocco,2,2,Serbia,1732,1796,25,16,FIFA World Cup Qualifiers
+2023-01-17,Belgium,Mexico,1,0,Belgium,2009,1812,4,14,FIFA World Cup Qualifiers
+2023-01-26,England,Senegal,1,1,England,1962,1766,3,18,CONMEBOL Qualifiers
+2023-01-27,Ecuador,Japan,2,1,Ecuador,1844,1782,20,17,Friendly
+2023-02-01,Cameroon,Morocco,0,1,Morocco,1677,1801,28,16,World Cup
+2023-02-03,Nigeria,Uruguay,0,1,Uruguay,1752,1887,26,10,World Cup
+2023-02-06,Denmark,Scotland,5,2,Denmark,1870,1741,19,26,Copa America
+2023-02-06,Poland,Iran,0,1,Iran,1785,1645,26,33,Africa Cup of Nations
+2023-02-12,Austria,Sweden,1,3,Austria,1821,1758,21,23,FIFA World Cup Qualifiers
+2023-02-14,Costa Rica,Denmark,2,1,Costa Rica,1739,1858,30,19,World Cup
+2023-02-16,Spain,Denmark,1,1,Spain,1910,1788,8,19,Copa America
+2023-02-17,Croatia,Denmark,1,0,Croatia,1779,1785,15,19,Africa Cup of Nations
+2023-02-18,Uruguay,Germany,0,1,Germany,1875,1913,10,9,UEFA Nations League
+2023-02-18,Algeria,Italy,1,0,Algeria,1778,1837,28,12,World Cup
+2023-02-19,Saudi Arabia,Austria,0,0,,1688,1751,32,21,World Cup
+2023-02-21,South Korea,Turkey,2,1,South Korea,1730,1861,21,20,FIFA World Cup Qualifiers
+2023-02-23,Peru,South Korea,0,1,South Korea,1727,1813,25,21,UEFA Nations League
+2023-02-27,Argentina,Ghana,0,0,,2135,1742,1,27,UEFA Nations League
+2023-03-08,Nigeria,Italy,1,1,Nigeria,1765,1840,26,12,Friendly
+2023-03-09,Costa Rica,Germany,1,3,Costa Rica,1705,1923,30,9,CONMEBOL Qualifiers
+2023-03-14,Denmark,Sweden,0,1,Sweden,1867,1726,19,23,Africa Cup of Nations
+2023-03-19,England,Australia,1,1,England,1979,1763,3,23,Africa Cup of Nations
+2023-03-20,Canada,Serbia,0,2,Serbia,1757,1723,24,25,CONMEBOL Qualifiers
+2023-04-07,Chile,Sweden,1,2,Chile,1736,1721,22,23,Africa Cup of Nations
+2023-04-08,England,Scotland,1,2,England,1936,1756,3,26,Africa Cup of Nations
+2023-04-08,Argentina,Uruguay,3,1,Argentina,2082,1961,1,10,CONMEBOL Qualifiers
+2023-04-10,Italy,Turkey,1,1,Italy,1875,1831,12,20,FIFA World Cup Qualifiers
+2023-04-12,Morocco,Mexico,2,0,Morocco,1844,1825,16,14,CONMEBOL Qualifiers
+2023-04-13,Serbia,Brazil,0,1,Brazil,1797,1954,25,5,UEFA Nations League
+2023-04-19,Denmark,Iran,2,2,Denmark,1840,1644,19,33,Friendly
+2023-04-22,Canada,Belgium,2,0,Canada,1814,1933,24,4,FIFA World Cup Qualifiers
+2023-04-22,Peru,Serbia,1,1,Peru,1729,1809,25,25,Gold Cup
+2023-04-24,Netherlands,France,1,0,Netherlands,1916,1966,7,2,Copa America
+2023-04-27,Cameroon,South Korea,3,1,Cameroon,1755,1762,28,21,Copa America
+2023-04-28,United States,Switzerland,2,1,United States,1896,1768,13,22,World Cup
+2023-05-03,Argentina,Chile,1,2,Argentina,2148,1750,1,22,Africa Cup of Nations
+2023-05-05,France,England,1,1,France,2029,1955,2,3,Africa Cup of Nations
+2023-05-05,Belgium,Germany,0,1,Germany,1999,1923,4,9,Africa Cup of Nations
+2023-05-07,Austria,Croatia,0,3,Croatia,1769,1862,21,15,UEFA Nations League
+2023-05-09,Tunisia,Egypt,4,1,Tunisia,1631,1773,31,27,CONMEBOL Qualifiers
+2023-05-13,Algeria,Denmark,1,2,Algeria,1722,1828,28,19,UEFA Nations League
+2023-05-16,Argentina,Mexico,2,0,Argentina,2149,1804,1,14,Friendly
+2023-05-22,Belgium,Canada,2,2,Belgium,1905,1764,4,24,Friendly
+2023-05-23,Colombia,United States,2,0,Colombia,1932,1867,11,13,FIFA World Cup Qualifiers
+2023-05-29,Canada,England,0,2,England,1799,1977,24,3,Gold Cup
+2023-05-29,Switzerland,Costa Rica,2,4,Switzerland,1812,1698,22,30,Copa America
+2023-05-31,Sweden,Senegal,6,0,Sweden,1807,1805,23,18,UEFA Nations League
+2023-06-02,Uruguay,Australia,2,3,Uruguay,1889,1763,10,23,FIFA World Cup Qualifiers
+2023-06-03,Uruguay,Argentina,0,2,Argentina,1877,2094,10,1,Africa Cup of Nations
+2023-06-04,Cameroon,Italy,0,0,,1763,1886,28,12,Africa Cup of Nations
+2023-06-04,Egypt,Peru,1,0,Egypt,1717,1788,27,25,Friendly
+2023-06-07,Ecuador,Turkey,0,3,Turkey,1814,1834,20,20,FIFA World Cup Qualifiers
+2023-06-07,Ecuador,Costa Rica,1,2,Ecuador,1749,1728,20,30,Africa Cup of Nations
+2023-06-09,Belgium,Mexico,4,0,Belgium,1939,1850,4,14,Copa America
+2023-06-11,South Korea,Denmark,2,0,South Korea,1773,1820,21,19,FIFA World Cup Qualifiers
+2023-06-11,France,Serbia,1,0,France,1990,1792,2,25,Africa Cup of Nations
+2023-06-12,Denmark,Egypt,2,2,Denmark,1862,1729,19,27,Africa Cup of Nations
+2023-06-14,Belgium,Morocco,1,0,Belgium,2017,1842,4,16,Copa America
+2023-06-17,Iran,Spain,3,1,Iran,1654,1935,33,8,CONMEBOL Qualifiers
+2023-06-18,Serbia,Croatia,0,3,Croatia,1766,1826,25,15,Africa Cup of Nations
+2023-06-19,South Korea,Germany,2,2,South Korea,1750,1963,21,9,FIFA World Cup Qualifiers
+2023-06-22,Australia,Ivory Coast,1,1,Australia,1739,1789,23,25,Friendly
+2023-07-04,Saudi Arabia,Chile,1,0,Saudi Arabia,1717,1760,32,22,Africa Cup of Nations
+2023-07-04,Senegal,England,1,2,Senegal,1761,1980,18,3,Copa America
+2023-07-04,Ecuador,Morocco,2,0,Ecuador,1752,1776,20,16,UEFA Nations League
+2023-07-05,Japan,Wales,2,2,Japan,1787,1738,17,29,Friendly
+2023-07-05,South Korea,Italy,1,3,South Korea,1780,1860,21,12,Friendly
+2023-07-07,France,Switzerland,2,3,France,2049,1826,2,22,Copa America
+2023-07-09,Denmark,Spain,2,1,Denmark,1831,1938,19,8,Friendly
+2023-07-10,Uruguay,Peru,1,0,Uruguay,1874,1807,10,25,CONMEBOL Qualifiers
+2023-07-10,Chile,Nigeria,2,2,Chile,1777,1784,22,26,UEFA Nations League
+2023-07-11,Sweden,Australia,1,2,Sweden,1739,1819,23,23,World Cup
+2023-07-15,Costa Rica,Saudi Arabia,0,2,Saudi Arabia,1749,1683,30,32,Friendly
+2023-07-17,Switzerland,Morocco,0,0,,1725,1771,22,16,UEFA Nations League
+2023-07-20,Brazil,Egypt,0,1,Egypt,1950,1712,5,27,CONMEBOL Qualifiers
+2023-07-30,Costa Rica,Egypt,2,2,Costa Rica,1723,1730,30,27,Africa Cup of Nations
+2023-07-31,South Korea,Brazil,0,0,,1814,1968,21,5,UEFA Nations League
+2023-08-04,Scotland,Egypt,1,1,Scotland,1749,1737,26,27,Africa Cup of Nations
+2023-08-08,Uruguay,United States,0,0,,1892,1819,10,13,FIFA World Cup Qualifiers
+2023-08-10,Chile,Tunisia,0,3,Tunisia,1737,1711,22,31,Gold Cup
+2023-08-12,Spain,Costa Rica,3,0,Spain,1968,1678,8,30,Africa Cup of Nations
+2023-08-12,Wales,Canada,2,0,Wales,1710,1769,29,24,UEFA Nations League
+2023-08-18,United States,Germany,3,0,United States,1890,1939,13,9,CONMEBOL Qualifiers
+2023-08-20,Australia,Tunisia,0,3,Tunisia,1789,1730,23,31,FIFA World Cup Qualifiers
+2023-08-22,Chile,Algeria,1,1,Chile,1805,1698,22,28,World Cup
+2023-08-27,Germany,Netherlands,0,2,Netherlands,1919,1974,9,7,Gold Cup
+2023-08-28,Ivory Coast,Egypt,0,3,Egypt,1767,1748,25,27,Africa Cup of Nations
+2023-08-30,Uruguay,Belgium,1,0,Uruguay,1936,1998,10,4,Copa America
+2023-09-02,Argentina,Saudi Arabia,1,1,Argentina,2047,1644,1,32,Africa Cup of Nations
+2023-09-04,Peru,England,2,2,Peru,1744,1978,25,3,FIFA World Cup Qualifiers
+2023-09-07,Serbia,Brazil,1,2,Serbia,1757,1976,25,5,Gold Cup
+2023-09-08,Canada,Denmark,1,0,Canada,1719,1832,24,19,Gold Cup
+2023-09-09,Colombia,Poland,3,1,Colombia,1908,1784,11,26,Africa Cup of Nations
+2023-09-11,Nigeria,Canada,1,2,Nigeria,1703,1777,26,24,World Cup
+2023-09-12,Turkey,Tunisia,3,1,Turkey,1814,1747,20,31,Copa America
+2023-09-16,Japan,Netherlands,0,1,Netherlands,1874,1963,17,7,World Cup
+2023-09-30,Wales,Germany,2,0,Wales,1677,1922,29,9,CONMEBOL Qualifiers
+2023-10-06,Wales,Italy,0,1,Italy,1747,1829,29,12,Copa America
+2023-10-09,South Korea,Japan,0,1,Japan,1771,1774,21,17,World Cup
+2023-10-18,Ecuador,Portugal,3,3,Ecuador,1790,2010,20,6,UEFA Nations League
+2023-10-19,Argentina,Italy,4,2,Argentina,2083,1883,1,12,FIFA World Cup Qualifiers
+2023-10-20,Japan,Ivory Coast,5,2,Japan,1851,1814,17,25,Friendly
+2023-10-22,Poland,Argentina,1,0,Poland,1782,2034,26,1,UEFA Nations League
+2023-10-26,Cameroon,Netherlands,0,0,,1671,1902,28,7,Friendly
+2023-10-28,Serbia,Switzerland,1,3,Serbia,1723,1788,25,22,CONMEBOL Qualifiers
+2023-11-02,Chile,Iran,0,0,,1755,1683,22,33,Africa Cup of Nations
+2023-11-06,Wales,Japan,0,1,Japan,1756,1791,29,17,Africa Cup of Nations
+2023-11-11,Japan,United States,3,1,Japan,1760,1880,17,13,Copa America
+2023-11-12,Turkey,Austria,2,0,Turkey,1755,1819,20,21,FIFA World Cup Qualifiers
+2023-11-14,Sweden,Denmark,1,2,Sweden,1761,1802,23,19,Copa America
+2023-11-19,United States,Mexico,3,1,United States,1884,1841,13,14,CONMEBOL Qualifiers
+2023-12-01,Peru,Wales,3,1,Peru,1759,1758,25,29,Gold Cup
+2023-12-07,Canada,Denmark,2,0,Canada,1730,1806,24,19,World Cup
+2023-12-11,Uruguay,Costa Rica,0,1,Costa Rica,1967,1647,10,30,UEFA Nations League
+2023-12-13,Costa Rica,Scotland,2,0,Costa Rica,1715,1754,30,26,World Cup
+2023-12-14,Croatia,Switzerland,1,2,Croatia,1874,1746,15,22,Friendly
+2023-12-14,Senegal,Sweden,0,2,Sweden,1836,1794,18,23,CONMEBOL Qualifiers
+2023-12-16,Netherlands,Sweden,1,2,Netherlands,1984,1795,7,23,Friendly
+2023-12-25,South Korea,Iran,2,1,South Korea,1740,1622,21,33,World Cup
+2023-12-26,Switzerland,Sweden,0,0,,1813,1770,22,23,Gold Cup
+2023-12-28,Netherlands,United States,4,1,Netherlands,1927,1819,7,13,UEFA Nations League
+2023-12-29,Uruguay,Senegal,0,3,Senegal,1957,1758,10,18,UEFA Nations League

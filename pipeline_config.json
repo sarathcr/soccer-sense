@@ -1,0 +1,46 @@
+{
+  "matches": {
+    "output": "data/sample_matches.csv",
+    "sources": [
+      {
+        "file": "data/raw_matches_1.csv",
+        "filters": {},
+        "mapping": {
+          "date": "date",
+          "home_team": "home_team",
+          "away_team": "away_team",
+          "home_goals": "home_goals",
+          "away_goals": "away_goals",
+          "tournament": "competition",
+          "home_elo": "home_elo",
+          "away_elo": "away_elo",
+          "home_elo_rank": "home_elo_rank",
+          "away_elo_rank": "away_elo_rank"
+        },
+        "defaults": {}
+      }
+    ]
+  },
+  "players": {
+    "output": "data/sample_players.csv",
+    "sources": [
+      {
+        "file": "data/raw_players_1.csv",
+        "filters": {
+          "status": "active"
+        },
+        "mapping": {
+          "national_team": "team",
+          "player_name": "name",
+          "pos": "position",
+          "exp_goals_90": "xg_per_90",
+          "goals_90": "goals_per_90",
+          "exp_assists_90": "xa_per_90",
+          "assists_90": "assists_per_90",
+          "starter_prob": "start_probability"
+        },
+        "defaults": {}
+      }
+    ]
+  }
+}

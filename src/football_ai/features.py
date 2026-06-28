@@ -1,0 +1,251 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any
+
+import pandas as pd
+
+
+RESULT_LABELS = ["away_win", "draw", "home_win"]
+FEATURE_COLUMNS = [
+    "home_elo",
+    "away_elo",
+    "home_elo_rank",
+    "away_elo_rank",
+    "elo_diff",
+    "rank_diff",
+    "home_gk_save_ratio",
+    "away_gk_save_ratio",
+    "home_gk_prevented_per_90",
+    "away_gk_prevented_per_90",
+]
+
+
+@dataclass(frozen=True)
+class TeamProfile:
+    team: str
+    elo: float
+    elo_rank: float
+    gk_save_ratio: float = 0.70
+    gk_prevented_per_90: float = 0.0
+
+
+def normalize_team_name(team) -> str:
+    if not isinstance(team, str):
+        import pandas as pd
+        if pd.isna(team):
+            return ""
+        team = str(team)
+    return " ".join(team.strip().split()).title()
+
+
+def result_label(home_goals: int, away_goals: int) -> str:
+    if home_goals > away_goals:
+        return "home_win"
+    if home_goals < away_goals:
+        return "away_win"
+    return "draw"
+
+
+def build_training_frame(
+    matches: pd.DataFrame,
+    team_profiles: dict[str, Any] | None = None,
+) -> pd.DataFrame:
+    frame = matches.copy()
+    frame["result"] = [
+        result_label(home, away)
+        for home, away in zip(frame["home_goals"], frame["away_goals"], strict=True)
+    ]
+    frame["total_goals"] = frame["home_goals"] + frame["away_goals"]
+    frame["both_teams_to_score"] = (
+        (frame["home_goals"] > 0) & (frame["away_goals"] > 0)
+    ).astype(int)
+    frame["home_clean_sheet"] = (frame["away_goals"] == 0).astype(int)
+    frame["away_clean_sheet"] = (frame["home_goals"] == 0).astype(int)
+    
+    # Handle missing first_goal_team column
+    if "first_goal_team" not in frame.columns:
+        first_goal_team = []
+        for h, a, ht, at in zip(frame["home_goals"], frame["away_goals"], frame["home_team"], frame["away_team"]):
+            if h > 0:
+                first_goal_team.append(ht)
+            elif a > 0:
+                first_goal_team.append(at)
+            else:
+                first_goal_team.append("")
+        frame["first_goal_team"] = first_goal_team
+
+    frame["first_goal_home"] = (frame["first_goal_team"] == frame["home_team"]).astype(int)
+    
+    # Add goalkeeper features
+    home_gk_save_ratio = []
+    away_gk_save_ratio = []
+    home_gk_prevented_per_90 = []
+    away_gk_prevented_per_90 = []
+    for h_team, a_team in zip(frame["home_team"], frame["away_team"]):
+        h_norm = normalize_team_name(h_team)
+        a_norm = normalize_team_name(a_team)
+        
+        h_prof = team_profiles.get(h_norm, {}) if team_profiles else {}
+        a_prof = team_profiles.get(a_norm, {}) if team_profiles else {}
+        
+        home_gk_save_ratio.append(h_prof.get("gk_save_ratio", 0.70))
+        away_gk_save_ratio.append(a_prof.get("gk_save_ratio", 0.70))
+        home_gk_prevented_per_90.append(h_prof.get("gk_prevented_per_90", 0.0))
+        away_gk_prevented_per_90.append(a_prof.get("gk_prevented_per_90", 0.0))
+        
+    frame["home_gk_save_ratio"] = home_gk_save_ratio
+    frame["away_gk_save_ratio"] = away_gk_save_ratio
+    frame["home_gk_prevented_per_90"] = home_gk_prevented_per_90
+    frame["away_gk_prevented_per_90"] = away_gk_prevented_per_90
+
+    return add_difference_features(frame)
+
+
+def add_difference_features(frame: pd.DataFrame) -> pd.DataFrame:
+    frame = frame.copy()
+    frame["elo_diff"] = frame["home_elo"] - frame["away_elo"]
+    frame["rank_diff"] = frame["away_elo_rank"] - frame["home_elo_rank"]
+    return frame
+
+
+def build_team_profiles(
+    matches: pd.DataFrame,
+    players: pd.DataFrame | None = None,
+) -> dict[str, dict[str, Any]]:
+    rows = []
+    for side in ("home", "away"):
+        rows.append(
+            matches[
+                [
+                    "date",
+                    f"{side}_team",
+                    f"{side}_elo",
+                    f"{side}_elo_rank",
+                ]
+            ].rename(
+                columns={
+                    f"{side}_team": "team",
+                    f"{side}_elo": "elo",
+                    f"{side}_elo_rank": "elo_rank",
+                }
+            )
+        )
+
+    all_teams = pd.concat(rows, ignore_index=True)
+    all_teams = all_teams.sort_values("date")
+    profiles: dict[str, dict[str, Any]] = {}
+    for team, team_rows in all_teams.groupby("team", sort=False):
+        # Use the single most recent match to get the team's current ELO.
+        # Averaging multiple rows produces a blended value that won't match
+        # any actual data point in the uploaded file.
+        latest = team_rows.iloc[-1][["elo", "elo_rank"]].apply(pd.to_numeric, errors="coerce")
+        normalized = normalize_team_name(team)
+        
+        # Calculate goalkeeper metrics for this team
+        gk_save_ratio = 0.70
+        gk_prevented_per_90 = 0.0
+        
+        if players is not None and not players.empty:
+            team_norm = normalized.lower()
+            team_players = players[
+                players["team"].apply(lambda t: normalize_team_name(t).lower()) == team_norm
+            ]
+            gks = team_players[team_players["position"].str.upper() == "GK"]
+            if not gks.empty:
+                # Get goalkeeper with the most minutes
+                primary_gk = gks.sort_values("mins", ascending=False).iloc[0]
+                save_perc = float(primary_gk.get("save_perc", 70.0))
+                if save_perc > 1.0:
+                    gk_save_ratio = save_perc / 100.0
+                elif save_perc > 0.0:
+                    gk_save_ratio = save_perc
+                else:
+                    gk_save_ratio = 0.70
+                
+                goals_prevented = float(primary_gk.get("goals_prevented", 0.0))
+                mins = float(primary_gk.get("mins", 0.0))
+                if mins > 90.0:
+                    gk_prevented_per_90 = goals_prevented / (mins / 90.0)
+                else:
+                    gk_prevented_per_90 = 0.0
+
+        profiles[normalized] = {
+            "team": normalized,
+            "elo": float(latest["elo"]),
+            "elo_rank": float(latest["elo_rank"]),
+            "gk_save_ratio": gk_save_ratio,
+            "gk_prevented_per_90": gk_prevented_per_90,
+        }
+    return profiles
+
+
+def get_val(profile: Any, attr: str, default: float = 0.0) -> Any:
+    if isinstance(profile, dict):
+        return profile.get(attr, default)
+    return getattr(profile, attr, default)
+
+
+def build_inference_features(
+    home_team: str,
+    away_team: str,
+    team_profiles: dict[str, Any],
+) -> pd.DataFrame:
+    home_name = normalize_team_name(home_team)
+    away_name = normalize_team_name(away_team)
+    
+    # Graceful fallback for home team
+    if home_name not in team_profiles:
+        import logging
+        logging.warning(f"Unknown home_team: {home_team}. Using fallback profile.")
+        if team_profiles:
+            avg_elo = sum(get_val(p, "elo") for p in team_profiles.values()) / len(team_profiles)
+            avg_rank = sum(get_val(p, "elo_rank") for p in team_profiles.values()) / len(team_profiles)
+        else:
+            avg_elo, avg_rank = 1500.0, 50.0
+        
+        home = {
+            "team": home_name,
+            "elo": avg_elo,
+            "elo_rank": avg_rank,
+            "gk_save_ratio": 0.70,
+            "gk_prevented_per_90": 0.0,
+        }
+    else:
+        home = team_profiles[home_name]
+
+    # Graceful fallback for away team
+    if away_name not in team_profiles:
+        import logging
+        logging.warning(f"Unknown away_team: {away_team}. Using fallback profile.")
+        if team_profiles:
+            avg_elo = sum(get_val(p, "elo") for p in team_profiles.values()) / len(team_profiles)
+            avg_rank = sum(get_val(p, "elo_rank") for p in team_profiles.values()) / len(team_profiles)
+        else:
+            avg_elo, avg_rank = 1400.0, 50.0
+        
+        away = {
+            "team": away_name,
+            "elo": avg_elo,
+            "elo_rank": avg_rank,
+            "gk_save_ratio": 0.70,
+            "gk_prevented_per_90": 0.0,
+        }
+    else:
+        away = team_profiles[away_name]
+
+    frame = pd.DataFrame(
+        [
+            {
+                "home_elo": get_val(home, "elo"),
+                "away_elo": get_val(away, "elo"),
+                "home_elo_rank": get_val(home, "elo_rank"),
+                "away_elo_rank": get_val(away, "elo_rank"),
+                "home_gk_save_ratio": get_val(home, "gk_save_ratio", 0.70),
+                "away_gk_save_ratio": get_val(away, "gk_save_ratio", 0.70),
+                "home_gk_prevented_per_90": get_val(home, "gk_prevented_per_90", 0.0),
+                "away_gk_prevented_per_90": get_val(away, "gk_prevented_per_90", 0.0),
+            }
+        ]
+    )
+    return add_difference_features(frame)[FEATURE_COLUMNS]
