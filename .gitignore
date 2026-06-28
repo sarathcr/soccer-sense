@@ -3,7 +3,6 @@
 
 # Re-include only the files and folders we want to track
 !/.gitignore
-!/.gitattributes
 !/.vercelignore
 !/README.md
 !/requirements.txt

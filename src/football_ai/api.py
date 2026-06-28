@@ -30,8 +30,7 @@ class UpdateVersionInput(BaseModel):
 
 @app.get("/health")
 def health() -> dict:
-    from .blob_storage import get_blob_status
-    return {"status": "ok", "blob": get_blob_status()}
+    return {"status": "ok"}
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -208,16 +207,6 @@ def train_from_upload(
         # Reload predictor with the new production model
         predictor = FootballPredictor(MODEL_PATH)
 
-        # ── Persist trained model to Vercel Blob so cold starts keep it ──
-        blob_synced = False
-        try:
-            from .blob_storage import upload_model, is_blob_enabled
-            if is_blob_enabled():
-                result = upload_model(MODEL_PATH)
-                blob_synced = result is not None
-        except Exception as _blob_err:
-            print(f"[Blob] Upload after training failed: {_blob_err}")
-
         required_labels = ["name", "nationality", "apps", "mins", "goals", "xg", "Goals vs xG", "shots", "sot", "conv %", "xG per Shot", "goals x90", "xg x90", "Goals vs xG x90", "shots x90", "sot x90"]
         player_validation_status = {col: (col not in missing_cols) for col in required_labels} if raw_players is not None else None
 
@@ -231,7 +220,6 @@ def train_from_upload(
             "warnings": warnings,
             "player_validation_status": player_validation_status,
             "version": artifact.get("version", "1.0.0"),
-            "blob_synced": blob_synced,
         }
     except Exception as e:
         import traceback
@@ -290,16 +278,6 @@ def train_from_url(payload: CrawlTrainInput):
         # Reload predictor with the new production model
         predictor = FootballPredictor(MODEL_PATH)
 
-        # ── Persist trained model to Vercel Blob so cold starts keep it ──
-        blob_synced = False
-        try:
-            from .blob_storage import upload_model, is_blob_enabled
-            if is_blob_enabled():
-                result = upload_model(MODEL_PATH)
-                blob_synced = result is not None
-        except Exception as _blob_err:
-            print(f"[Blob] Upload after training failed: {_blob_err}")
-
         # Check warnings
         warnings = []
         if matches_df is not None and not matches_df.empty:
@@ -334,7 +312,6 @@ def train_from_url(payload: CrawlTrainInput):
             "warnings": warnings,
             "player_validation_status": player_validation_status,
             "version": artifact.get("version", "1.0.0"),
-            "blob_synced": blob_synced,
         }
     except Exception as e:
         import traceback
@@ -415,15 +392,7 @@ def reset_system() -> dict[str, str]:
         
         # Reload predictor to pick up the clean default model
         predictor = FootballPredictor(MODEL_PATH)
-
-        # ── Remove custom model from Vercel Blob so cold starts use bundled default ──
-        try:
-            from .blob_storage import delete_model, is_blob_enabled
-            if is_blob_enabled():
-                delete_model()
-        except Exception as _blob_err:
-            print(f"[Blob] Delete after reset failed: {_blob_err}")
-
+        
         return {
             "status": "success",
             "message": "System data and models successfully reset to clean defaults."
@@ -554,6 +523,3 @@ def download_production_model_versioned():
     except Exception:
         pass
     raise HTTPException(status_code=404, detail="Versioned production model file not found.")
-
-# Trigger reload: model updated with goalkeeper names
-
