@@ -536,12 +536,17 @@ class PredictorWrapper:
             return {
                 "name": player["name"], 
                 "predictions": predictions,
+                "expected_goals": expected_goals,
+                "one_goal_prob": one_goal_probability,
+                "two_goal_prob": two_goal_probability,
                 "mins": int(mins),
                 "xg_x90": round(xg_90, 2),
                 "goals_x90": round(goals_90, 2),
                 "sot_x90": round(sot_90, 2),
                 "conv_pct": round(conv_pct, 1)
             }
+
+
 
         def _player_predictions(team, cs_prob):
             team_norm = normalize_player_name(team).lower()
@@ -566,14 +571,34 @@ class PredictorWrapper:
                 [p for p in players if p.get("position") not in ["GK", "Goalkeeper", "goalkeeper", "GOALKEEPER"]],
                 key=player_rank_key,
                 reverse=True,
-            )[:3]
+            )
             goalkeeper = next(
                 (p for p in players if p.get("position") in ["GK", "Goalkeeper", "goalkeeper", "GOALKEEPER"]),
                 {"name": "Unknown Goalkeeper"},
             )
+            
+            base_preds = [_goal_prediction(p) for p in attackers]
+            final_goals = []
+            for p in base_preds:
+                # Filter by probability >= 10%
+                if p["predictions"]:
+                    prob = p["predictions"][0]["probability"]
+                    if prob >= 10:
+                        out_player = {
+                            "name": p["name"],
+                            "predictions": p["predictions"]
+                        }
+                        for k in ["mins", "xg_x90", "goals_x90", "sot_x90", "conv_pct"]:
+                            if k in p:
+                                out_player[k] = p[k]
+                        final_goals.append(out_player)
+
+            # Sort by highest scoring probability
+            final_goals = sorted(final_goals, key=lambda x: x["predictions"][0]["probability"] if x["predictions"] else 0, reverse=True)
+
             return {
                 "team": team,
-                "goal": [_goal_prediction(p) for p in attackers],
+                "goal": final_goals,
                 "clean_sheet_prediction": {
                     "goalkeeper": goalkeeper["name"],
                     "prediction": bool(cs_prob >= 50),
@@ -919,39 +944,87 @@ class PredictorWrapper:
         else:
             away = self.team_profiles[a_team]
 
-        frame = pd.DataFrame([{{
-            "home_elo": get_val(home, "elo"),
-            "away_elo": get_val(away, "elo"),
-            "home_elo_rank": get_val(home, "elo_rank"),
-            "away_elo_rank": get_val(away, "elo_rank"),
-            "home_gk_save_ratio": get_val(home, "gk_save_ratio", 0.70),
-            "away_gk_save_ratio": get_val(away, "gk_save_ratio", 0.70),
-            "home_gk_prevented_per_90": get_val(home, "gk_prevented_per_90", 0.0),
-            "away_gk_prevented_per_90": get_val(away, "gk_prevented_per_90", 0.0),
-        }}])
-        frame["elo_diff"] = frame["home_elo"] - frame["away_elo"]
-        frame["rank_diff"] = frame["away_elo_rank"] - frame["home_elo_rank"]
+        _STAT_DEFAULTS = {{
+            "attack_rating": 45.0,
+            "defense_rating": 45.0,
+            "goals_avg": 1.25,
+            "conceded_avg": 1.25,
+            "win_rate": 0.35,
+            "clean_sheet_rate": 0.25,
+            "xg_avg": 1.20,
+            "form_pts": 6.0,
+            "first_goal_rate": 0.40,
+        }}
 
-        feature_cols = [
-            "home_elo", "away_elo", "home_elo_rank", "away_elo_rank", "elo_diff", "rank_diff",
-            "home_gk_save_ratio", "away_gk_save_ratio", "home_gk_prevented_per_90", "away_gk_prevented_per_90"
-        ]
-        features = frame[feature_cols]
+        def _get_feature_vector(home_name, away_name):
+            def _fallback_profile(name):
+                if self.team_profiles:
+                    avg_elo = sum(get_val(p, "elo") for p in self.team_profiles.values()) / len(self.team_profiles)
+                    avg_rank = sum(get_val(p, "elo_rank") for p in self.team_profiles.values()) / len(self.team_profiles)
+                else:
+                    avg_elo, avg_rank = 1500.0, 50.0
+                p = {{"team": name, "elo": avg_elo, "elo_rank": avg_rank}}
+                p.update(_STAT_DEFAULTS)
+                p["gk_save_ratio"] = 0.70
+                p["gk_prevented_per_90"] = 0.0
+                return p
 
-        # Neutral venue expected goals averaging (FIFA World Cup)
-        frame_swapped = pd.DataFrame([{{
-            "home_elo": get_val(away, "elo"),
-            "away_elo": get_val(home, "elo"),
-            "home_elo_rank": get_val(away, "elo_rank"),
-            "away_elo_rank": get_val(home, "elo_rank"),
-            "home_gk_save_ratio": get_val(away, "gk_save_ratio", 0.70),
-            "away_gk_save_ratio": get_val(home, "gk_save_ratio", 0.70),
-            "home_gk_prevented_per_90": get_val(away, "gk_prevented_per_90", 0.0),
-            "away_gk_prevented_per_90": get_val(home, "gk_prevented_per_90", 0.0),
-        }}])
-        frame_swapped["elo_diff"] = frame_swapped["home_elo"] - frame_swapped["away_elo"]
-        frame_swapped["rank_diff"] = frame_swapped["away_elo_rank"] - frame_swapped["home_elo_rank"]
-        features_swapped = frame_swapped[feature_cols]
+            home = self.team_profiles.get(home_name)
+            if not home:
+                home = _fallback_profile(home_name)
+            away = self.team_profiles.get(away_name)
+            if not away:
+                away = _fallback_profile(away_name)
+
+            row = {{
+                # Core ELO
+                "home_elo":      get_val(home, "elo"),
+                "away_elo":      get_val(away, "elo"),
+                "home_elo_rank": get_val(home, "elo_rank"),
+                "away_elo_rank": get_val(away, "elo_rank"),
+                # GK
+                "home_gk_save_ratio":       get_val(home, "gk_save_ratio",       0.70),
+                "away_gk_save_ratio":       get_val(away, "gk_save_ratio",       0.70),
+                "home_gk_prevented_per_90": get_val(home, "gk_prevented_per_90", 0.0),
+                "away_gk_prevented_per_90": get_val(away, "gk_prevented_per_90", 0.0),
+                # Extended
+                "home_attack_rating":  get_val(home, "attack_rating",  _STAT_DEFAULTS["attack_rating"]),
+                "away_attack_rating":  get_val(away, "attack_rating",  _STAT_DEFAULTS["attack_rating"]),
+                "home_defense_rating": get_val(home, "defense_rating", _STAT_DEFAULTS["defense_rating"]),
+                "away_defense_rating": get_val(away, "defense_rating", _STAT_DEFAULTS["defense_rating"]),
+                "home_goals_avg":      get_val(home, "goals_avg",      _STAT_DEFAULTS["goals_avg"]),
+                "away_goals_avg":      get_val(away, "goals_avg",      _STAT_DEFAULTS["goals_avg"]),
+                "home_conceded_avg":   get_val(home, "conceded_avg",   _STAT_DEFAULTS["conceded_avg"]),
+                "away_conceded_avg":   get_val(away, "conceded_avg",   _STAT_DEFAULTS["conceded_avg"]),
+                "home_win_rate":         get_val(home, "win_rate",         _STAT_DEFAULTS["win_rate"]),
+                "away_win_rate":         get_val(away, "win_rate",         _STAT_DEFAULTS["win_rate"]),
+                "home_clean_sheet_rate": get_val(home, "clean_sheet_rate", _STAT_DEFAULTS["clean_sheet_rate"]),
+                "away_clean_sheet_rate": get_val(away, "clean_sheet_rate", _STAT_DEFAULTS["clean_sheet_rate"]),
+                "home_xg_avg":    get_val(home, "xg_avg",    _STAT_DEFAULTS["xg_avg"]),
+                "away_xg_avg":    get_val(away, "xg_avg",    _STAT_DEFAULTS["xg_avg"]),
+                "home_form_pts":  get_val(home, "form_pts",  _STAT_DEFAULTS["form_pts"]),
+                "away_form_pts":  get_val(away, "form_pts",  _STAT_DEFAULTS["form_pts"]),
+                "home_first_goal_rate": get_val(home, "first_goal_rate", _STAT_DEFAULTS["first_goal_rate"]),
+                "away_first_goal_rate": get_val(away, "first_goal_rate", _STAT_DEFAULTS["first_goal_rate"]),
+            }}
+
+            frame = pd.DataFrame([row])
+
+            # Compute differentials
+            frame["elo_diff"]          = frame["home_elo"]           - frame["away_elo"]
+            frame["rank_diff"]         = frame["away_elo_rank"]      - frame["home_elo_rank"]
+            frame["attack_diff"]       = frame["home_attack_rating"] - frame["away_attack_rating"]
+            frame["defense_diff"]      = frame["home_defense_rating"]- frame["away_defense_rating"]
+            frame["goals_avg_diff"]    = frame["home_goals_avg"]     - frame["away_goals_avg"]
+            frame["conceded_avg_diff"] = frame["home_conceded_avg"]  - frame["away_conceded_avg"]
+            frame["win_rate_diff"]     = frame["home_win_rate"]      - frame["away_win_rate"]
+            frame["xg_avg_diff"]       = frame["home_xg_avg"]        - frame["away_xg_avg"]
+            frame["form_diff"]         = frame["home_form_pts"]      - frame["away_form_pts"]
+
+            return frame[self.artifact["feature_columns"]]
+
+        features = _get_feature_vector(h_team, a_team)
+        features_swapped = _get_feature_vector(a_team, h_team)
 
         goals_a_as_home = float(self.home_goals_model.predict(features)[0])
         goals_a_as_away = float(self.away_goals_model.predict(features_swapped)[0])
@@ -1101,7 +1174,7 @@ class PredictorWrapper:
                     {{"team": team, "name": f"{{team}} Forward 2", "position": "FW", "xg_per_90": 0.4, "goals_per_90": 0.3, "xa_per_90": 0.1, "assists_per_90": 0.1, "start_probability": 0.8, "mins": 90}}
                 ]
             else:
-                attackers = sorted(attackers, key=player_rank_key, reverse=True)[:3]
+                attackers = sorted(attackers, key=player_rank_key, reverse=True)
 
             goalkeeper = next(
                 (p for p in players if p.get("position") in ["GK", "Goalkeeper", "goalkeeper", "GOALKEEPER"]),
@@ -1120,9 +1193,24 @@ class PredictorWrapper:
                     "mins": 90,
                 }}
 
+            base_preds = [_goal_prediction(p) for p in attackers]
+            final_goals = []
+            for p in base_preds:
+                # Filter by probability >= 10%
+                if p["predictions"]:
+                    prob = p["predictions"][0]["probability"]
+                    if prob >= 10:
+                        final_goals.append({{
+                            "name": p["name"],
+                            "predictions": p["predictions"]
+                        }})
+
+            # Sort by highest scoring probability
+            final_goals = sorted(final_goals, key=lambda x: x["predictions"][0]["probability"] if x["predictions"] else 0, reverse=True)
+
             return {{
                 "team": team,
-                "goal": [_goal_prediction(p) for p in attackers],
+                "goal": final_goals,
                 "clean_sheet_prediction": {{
                     "goalkeeper": goalkeeper["name"],
                     "prediction": bool(cs_prob >= 50),

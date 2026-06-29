@@ -401,7 +401,7 @@ class FootballPredictor:
                 }
             ]
         else:
-            attackers = sorted(attackers, key=player_rank_key, reverse=True)[:3]
+            attackers = sorted(attackers, key=player_rank_key, reverse=True)
 
         goalkeeper = next(
             (p for p in players if p.get("position") in ["GK", "Goalkeeper", "goalkeeper", "GOALKEEPER"]),
@@ -420,9 +420,21 @@ class FootballPredictor:
                 "mins": 90,
             }
 
+        # Calculate predictions for all attackers and filter by >= 10% probability
+        base_preds = [self._goal_prediction(player) for player in attackers]
+        final_goals = []
+        for p in base_preds:
+            if p["predictions"]:
+                prob = p["predictions"][0]["probability"]
+                if prob >= 10:
+                    final_goals.append(p)
+
+        # Sort the final list by highest probability so the biggest threats are first
+        final_goals = sorted(final_goals, key=lambda x: x["predictions"][0]["probability"] if x["predictions"] else 0, reverse=True)
+
         return {
             "team": team,
-            "goal": [self._goal_prediction(player) for player in attackers],
+            "goal": final_goals,
             "clean_sheet_prediction": {
                 "goalkeeper": goalkeeper["name"],
                 "prediction": bool(clean_sheet_probability >= 50),
