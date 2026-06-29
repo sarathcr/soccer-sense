@@ -7,12 +7,7 @@
   ],
   "functions": {
     "api/index.py": {
-      "includeFiles": [
-        "models/**",
-        "data/**",
-        "pipeline_config.json",
-        "src/football_ai/static/**"
-      ]
+      "includeFiles": "{models/**,data/**,pipeline_config.json,src/football_ai/static/**}"
     }
   }
 }
