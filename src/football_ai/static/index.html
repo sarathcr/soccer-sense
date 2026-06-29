@@ -1,0 +1,2063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soccer Sense Match Forecaster</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #0b0f19;
+            --bg-surface: rgba(17, 24, 39, 0.7);
+            --bg-card: rgba(31, 41, 55, 0.4);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --accent-primary: #10b981; /* Emerald */
+            --accent-primary-glow: rgba(16, 185, 129, 0.25);
+            --accent-secondary: #3b82f6; /* Blue */
+            --accent-secondary-glow: rgba(59, 130, 246, 0.25);
+            --accent-danger: #ef4444;
+            --accent-gold: #f59e0b;
+            --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+            --font-main: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.06) 0%, transparent 40%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            min-height: 100vh;
+            padding: 2rem 1.5rem;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header block */
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        header h1 {
+            font-size: 2.75rem;
+            font-weight: 800;
+            letter-spacing: -0.05em;
+            background: linear-gradient(135deg, #ffffff 30%, #a1a1aa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-weight: 300;
+        }
+
+        header .badge {
+            display: inline-block;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(59, 130, 246, 0.15) 100%);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--accent-primary);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            margin-bottom: 1rem;
+        }
+
+        /* Dashboard Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        @media (min-width: 900px) {
+            .dashboard-grid {
+                grid-template-columns: 4fr 5fr;
+            }
+        }
+
+        /* Glassmorphic Panel */
+        .panel {
+            background-color: var(--bg-surface);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 1.25rem;
+            padding: 2rem;
+            box-shadow: var(--shadow-lg);
+            transition: transform 0.3s ease, border-color 0.3s ease;
+            height: fit-content;
+        }
+
+        .panel:hover {
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .panel-title {
+            font-size: 1.35rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.75rem;
+        }
+
+        .panel-title .icon {
+            font-size: 1.5rem;
+        }
+
+        /* Forms and Inputs */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.02em;
+        }
+
+        .form-control {
+            width: 100%;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 0.85rem 1rem;
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--accent-secondary);
+            box-shadow: 0 0 0 4px var(--accent-secondary-glow);
+        }
+
+        select.form-control {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23f3f4f6'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1.25rem;
+            padding-right: 2.5rem;
+        }
+
+        /* Buttons */
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            width: 100%;
+            padding: 0.9rem 1.5rem;
+            font-family: var(--font-main);
+            font-size: 0.95rem;
+            font-weight: 600;
+            border-radius: 0.75rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-primary) 0%, #059669 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 15px var(--accent-primary-glow);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, var(--accent-secondary) 0%, #2563eb 100%);
+            color: #ffffff;
+            box-shadow: 0 4px 15px var(--accent-secondary-glow);
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            width: 1.25rem;
+            height: 1.25rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #ffffff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: none;
+        }
+
+        /* Training Console & Log Output */
+        .console {
+            background-color: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #34d399; /* Light green code */
+            max-height: 180px;
+            overflow-y: auto;
+            margin-top: 1.25rem;
+            display: none;
+        }
+
+        /* Metric Widgets */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .metric-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Predictor Results UI */
+        .prediction-box {
+            display: none;
+            animation: fadeInUp 0.5s ease-out;
+        }
+
+        /* Scoreboard Display */
+        .scoreboard {
+            background: linear-gradient(135deg, rgba(31, 41, 55, 0.7) 0%, rgba(17, 24, 39, 0.9) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            padding: 2rem;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .scoreboard::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-secondary), var(--accent-primary));
+        }
+
+        .scoreboard-team {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 38%;
+            text-align: center;
+        }
+
+        .team-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: #ffffff;
+            letter-spacing: -0.02em;
+        }
+
+        .team-role {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .score-display {
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: #ffffff;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+            padding: 0 1rem;
+        }
+
+        .scoreboard-vs {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            background-color: var(--bg-base);
+            padding: 0.4rem 0.8rem;
+            border-radius: 9999px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Probability Bars */
+        .prob-section {
+            margin-bottom: 2rem;
+        }
+
+        .prob-bar-container {
+            display: flex;
+            height: 1.75rem;
+            border-radius: 9999px;
+            overflow: hidden;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            margin-bottom: 1rem;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .prob-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #ffffff;
+            transition: width 1s ease-in-out;
+        }
+
+        .prob-bar.home {
+            background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+        }
+
+        .prob-bar.draw {
+            background: #4b5563;
+        }
+
+        .prob-bar.away {
+            background: linear-gradient(90deg, #10b981, #047857);
+        }
+
+        .prob-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .prob-label-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .dot {
+            width: 0.65rem;
+            height: 0.65rem;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .dot.home { background-color: var(--accent-secondary); }
+        .dot.draw { background-color: var(--text-secondary); }
+        .dot.away { background-color: var(--accent-primary); }
+
+        /* Goal Insights & Player Predictions */
+        .insights-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (min-width: 600px) {
+            .insights-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .insight-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+        }
+
+        .insight-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .insight-value {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .insight-value span {
+            color: var(--accent-primary);
+        }
+
+        .player-prediction-list {
+            list-style: none;
+            margin-top: 0.75rem;
+        }
+
+        .player-prediction-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            font-size: 0.9rem;
+        }
+
+        .player-prediction-item:last-child {
+            border-bottom: none;
+        }
+
+        .player-name {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .player-prob {
+            font-weight: 700;
+            color: var(--accent-gold);
+            background-color: rgba(245, 158, 11, 0.1);
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+
+        /* Animations */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Status messages */
+        .toast {
+            padding: 0.85rem 1rem;
+            border-radius: 0.75rem;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .toast-success {
+            background-color: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #34d399;
+        }
+
+        .toast-error {
+            background-color: rgba(239, 44, 44, 0.15);
+            border: 1px solid rgba(239, 44, 44, 0.3);
+            color: #f87171;
+        }
+
+        /* Tabs Interface */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 0.5rem 1rem;
+            font-family: var(--font-main);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 0.5rem;
+            transition: all 0.25s ease;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+            background-color: var(--bg-card);
+        }
+
+        .tab-btn.active {
+            color: #ffffff;
+            background-color: var(--accent-secondary);
+            box-shadow: 0 2px 10px var(--accent-secondary-glow);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Main Page Navigation */
+        .main-nav {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .nav-btn {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 0.75rem 1.75rem;
+            font-family: var(--font-main);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 0.75rem;
+            transition: all 0.25s ease;
+        }
+
+        .nav-btn:hover {
+            color: var(--text-primary);
+            border-color: rgba(255, 255, 255, 0.2);
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-btn.active {
+            color: #ffffff;
+            background: linear-gradient(135deg, var(--accent-secondary) 0%, #1e40af 100%);
+            border-color: var(--accent-secondary);
+            box-shadow: 0 4px 15px var(--accent-secondary-glow);
+        }
+
+        .page-content {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .page-content.active {
+            display: block;
+        }
+
+        /* Table Styling */
+        .profile-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-size: 0.95rem;
+            text-align: left;
+        }
+
+        .profile-table th {
+            background-color: rgba(255, 255, 255, 0.04);
+            color: var(--text-secondary);
+            font-weight: 600;
+            padding: 1rem;
+            border-bottom: 2px solid var(--border-color);
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.2s ease;
+        }
+
+        .profile-table th:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+        }
+
+        .profile-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .profile-table tr:hover {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <span class="badge">Live ML Retraining Pipeline</span>
+            <h1>Soccer Sense</h1>
+            <p>Fetch real-time match fixtures and squad stats from the web to train and predict match outcomes.</p>
+        </header>
+
+        <!-- Main Page Navigation -->
+        <div class="main-nav">
+            <button type="button" class="nav-btn active" id="btnPageForecaster" onclick="switchPage('forecaster')">🔮 Match Forecaster</button>
+            <button type="button" class="nav-btn" id="btnPageExplain" onclick="switchPage('explain')" style="display: none;">🔍 Prediction Breakdown</button>
+            <button type="button" class="nav-btn" id="btnPageProfiles" onclick="switchPage('profiles')">📊 Team Profiles Viewer</button>
+        </div>
+
+        <!-- PAGE 1: Match Forecaster Dashboard -->
+        <div id="pageForecaster" class="page-content active">
+            <div class="dashboard-grid">
+                <!-- Left Panel: Data Crawler and Train Control -->
+                <div class="panel">
+                    <h2 class="panel-title">
+                        <span class="icon">🚀</span> Live Data Ingestion & training
+                    </h2>
+                    
+                    <div class="tabs">
+                        <button type="button" class="tab-btn active" id="btnCrawlerTab" onclick="switchTab('crawler')">Web Crawler</button>
+                        <button type="button" class="tab-btn" id="btnUploadTab" onclick="switchTab('upload')">File Upload</button>
+                    </div>
+
+                    <div id="crawlerTab" class="tab-content active">
+                        <form id="trainForm">
+                            <div class="form-group">
+                                <label for="matchesUrl">Matches URL (e.g. Wikipedia Tournament Results)</label>
+                                <input type="url" id="matchesUrl" class="form-control" placeholder="https://en.wikipedia.org/wiki/2024_Copa_Am%C3%A9rica#Group_stage">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="playersUrl">Players URL (e.g. Wikipedia Squads)</label>
+                                <input type="url" id="playersUrl" class="form-control" placeholder="https://en.wikipedia.org/wiki/2024_Copa_Am%C3%A9rica_squads">
+                            </div>
+
+                            <button type="submit" id="trainBtn" class="btn btn-primary">
+                                <span class="spinner" id="trainSpinner"></span>
+                                <span id="trainBtnText">Crawl & Retrain Models</span>
+                            </button>
+                        </form>
+                    </div>
+
+                    <div id="uploadTab" class="tab-content">
+                        <form id="uploadForm">
+                            <div class="form-group">
+                                <label for="matchesFile">Matches Data Files (CSV, Excel, JSON - Select multiple)</label>
+                                <input type="file" id="matchesFile" class="form-control" accept=".csv,.xlsx,.xls,.json" multiple>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="playersFile">Players Data Files (CSV, Excel, JSON - Select multiple)</label>
+                                <input type="file" id="playersFile" class="form-control" accept=".csv,.xlsx,.xls,.json" multiple>
+                            </div>
+
+                            <button type="submit" id="uploadBtn" class="btn btn-primary">
+                                <span class="spinner" id="uploadSpinner"></span>
+                                <span id="uploadBtnText">Upload & Retrain Models</span>
+                            </button>
+                        </form>
+                    </div>
+
+                    <div style="margin-top: 1.25rem;">
+                        <button id="resetBtn" class="btn btn-secondary" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border: none; color: white; width: 100%; font-weight: 600; padding: 0.65rem;" type="button">
+                            <span>🔄</span> Reset Model & Data to Defaults
+                        </button>
+                    </div>
+
+                    <div class="toast" id="trainToast"></div>
+                    <div class="console" id="consoleOutput"></div>
+
+                    <div class="metrics-grid" id="metricsPanel" style="display: none;">
+                        <div class="metric-card">
+                            <div class="metric-value" id="metricAccuracy">--</div>
+                            <div class="metric-label">Accuracy</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="metricGoalsMae">--</div>
+                            <div class="metric-label">Goals MAE</div>
+                        </div>
+                    </div>
+
+                    <!-- Warnings Banner -->
+                    <div id="warningBox" class="toast" style="display: none; background-color: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); color: #fbbf24; margin-top: 1.25rem;">
+                        <h4 style="font-weight: 700; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <span>⚠️</span> Data Validation Warnings
+                        </h4>
+                        <ul id="warningsList" style="padding-left: 1.25rem; font-size: 0.85rem; line-height: 1.45; text-align: left; margin: 0; margin-bottom: 1rem;"></ul>
+                        
+                        <!-- Visual Column validation status grid -->
+                        <div id="validationGridSection" style="margin-top: 1rem; border-top: 1px solid rgba(245, 158, 11, 0.25); padding-top: 0.75rem; display: none;">
+                            <h5 style="font-weight: 600; margin-bottom: 0.5rem; font-size: 0.85rem;">Player Level Intelligence - Schema Validation Grid:</h5>
+                            <div id="validationGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 0.5rem; font-size: 0.75rem;">
+                                <!-- Grid items will be added dynamically by JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Downloads Container -->
+                    <div id="downloadContainer" style="display: flex; margin-top: 1.5rem; flex-direction: column; gap: 0.75rem;">
+                        <h3 style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;">📊 Data Downloads</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                            <a href="/download/matches" class="btn btn-secondary" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); text-decoration: none;" download>
+                                <span>📥</span> Matches CSV
+                            </a>
+                            <a href="/download/players" class="btn btn-secondary" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); text-decoration: none;" download>
+                                <span>📥</span> Players CSV
+                            </a>
+                        </div>
+                        
+                        <h3 style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.5rem; margin-bottom: 0.25rem;">🤖 Model Downloads</h3>
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <a href="/download/dev_model" class="btn btn-secondary" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); text-decoration: none;" download>
+                                <span>🤖</span> Download Dev Model (75/25 Split)
+                            </a>
+                            <a href="/download/production_model" class="btn btn-secondary" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); text-decoration: none;" download>
+                                <span>🏆</span> Download Soccer Sense Model (100% Fit)
+                            </a>
+                            <a id="btnDownloadVersioned" href="/download/production_model_versioned" class="btn btn-secondary" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); text-decoration: none;" download>
+                                <span>📦</span> Download Versioned Soccer Sense Model (.pkl)
+                            </a>
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-top: 0.25rem; padding: 0.5rem; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 6px;">
+                                <span style="font-size: 0.78rem; color: var(--text-secondary); font-weight: 500;">Model Version:</span>
+                                <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                    <input type="text" id="modelVersionInput" value="1.0.0" style="width: 60px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 4px; padding: 0.2rem 0.4rem; font-size: 0.78rem; text-align: center; font-family: monospace; font-weight: bold;" />
+                                    <button type="button" id="btnIncrementVersion" title="Increment Patch Version" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.08); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: bold;">+</button>
+                                    <button type="button" id="btnUpdateVersion" style="padding: 0.2rem 0.6rem; background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); border: none; color: white; border-radius: 4px; cursor: pointer; font-size: 0.78rem; font-weight: 600;">Update</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Panel: Match Forecaster Widget -->
+                <div class="panel">
+                    <h2 class="panel-title">
+                        <span class="icon">🔮</span> Match Prediction Engine
+                    </h2>
+
+                    <form id="predictForm">
+                        <div class="form-group">
+                            <label for="homeTeam">Home Team</label>
+                            <select id="homeTeam" class="form-control" required>
+                                <option value="">Select Home Team...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="awayTeam">Away Team</label>
+                            <select id="awayTeam" class="form-control" required>
+                                <option value="">Select Away Team...</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" id="predictBtn" class="btn btn-secondary">
+                            <span class="spinner" id="predictSpinner"></span>
+                            <span>Run Match Simulation</span>
+                        </button>
+                    </form>
+
+                    <!-- Prediction output results -->
+                    <div class="prediction-box" id="predictionBox" style="margin-top: 2rem;">
+                        
+                        <!-- Scoreboard -->
+                        <div class="scoreboard">
+                            <div class="scoreboard-team">
+                                <span class="team-name" id="scoreHomeTeam">Home</span>
+                                <span class="team-role">Home</span>
+                            </div>
+                            <div class="score-display">
+                                <span id="scoreHome">0</span>
+                                <span class="scoreboard-vs">VS</span>
+                                <span id="scoreAway">0</span>
+                            </div>
+                            <div class="scoreboard-team">
+                                <span class="team-name" id="scoreAwayTeam">Away</span>
+                                <span class="team-role">Away</span>
+                            </div>
+                        </div>
+
+                        <!-- Win Probabilities -->
+                        <div class="prob-section">
+                            <h3 class="insight-title" style="margin-bottom: 0.5rem;">Match Outcome Probabilities</h3>
+                            <div class="prob-bar-container">
+                                <div class="prob-bar home" id="probBarHome" style="width: 33%">Home Win</div>
+                                <div class="prob-bar draw" id="probBarDraw" style="width: 34%">Draw</div>
+                                <div class="prob-bar away" id="probBarAway" style="width: 33%">Away Win</div>
+                            </div>
+                            <div class="prob-labels">
+                                <div class="prob-label-item">
+                                    <span class="dot home"></span>
+                                    <span id="labelHomeName">Home</span>: <span id="valHomeProb">33%</span>
+                                </div>
+                                <div class="prob-label-item">
+                                    <span class="dot draw"></span>
+                                    Draw: <span id="valDrawProb">34%</span>
+                                </div>
+                                <div class="prob-label-item">
+                                    <span class="dot away"></span>
+                                    <span id="labelAwayName">Away</span>: <span id="valAwayProb">33%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Goal Insights & Goalscorers -->
+                        <div class="insights-grid">
+                            <div class="insight-card">
+                                <div class="insight-title">⚽ Goal Insights</div>
+                                <div style="margin-top: 0.5rem;">
+                                    <div class="player-prediction-item">
+                                        <span>First Goal Team:</span>
+                                        <span id="insightFirstGoal" style="font-weight: 700;">--</span>
+                                    </div>
+                                    <div class="player-prediction-item">
+                                        <span>Both Teams to Score:</span>
+                                        <span id="insightBtts" style="font-weight: 700;">--</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="insight-card">
+                                <div class="insight-title">🧤 Clean Sheet prediction</div>
+                                <div style="margin-top: 0.5rem;">
+                                    <div class="player-prediction-item">
+                                        <span id="homeCleanSheetLabel">Home Clean Sheet:</span>
+                                        <span id="homeCleanSheetProb" style="font-weight: 700;">--</span>
+                                    </div>
+                                    <div class="player-prediction-item">
+                                        <span id="awayCleanSheetLabel">Away Clean Sheet:</span>
+                                        <span id="awayCleanSheetProb" style="font-weight: 700;">--</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Projected Player Goalscorers -->
+                        <div class="insights-grid" style="margin-top: 1.5rem;">
+                            <div class="insight-card">
+                                <div class="insight-title">🔥 Home Key Goal Threat</div>
+                                <ul class="player-prediction-list" id="homePlayersList">
+                                    <li>--</li>
+                                </ul>
+                            </div>
+
+                            <div class="insight-card">
+                                <div class="insight-title">🔥 Away Key Goal Threat</div>
+                                <ul class="player-prediction-list" id="awayPlayersList">
+                                    <li>--</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- View Explainability Button -->
+                        <div style="margin-top: 1.5rem; text-align: center;">
+                            <button type="button" class="btn btn-secondary" style="background: linear-gradient(135deg, var(--accent-gold) 0%, #d97706 100%); width: auto; min-width: 280px; margin: 0 auto;" onclick="switchPage('explain')">
+                                <span>🔍</span> View Step-by-Step Prediction Breakdown
+                            </button>
+                        </div>
+
+                        <!-- Raw JSON Viewer -->
+                        <div style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1.5rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                <h3 class="insight-title" style="margin: 0; color: var(--text-primary);">📋 Raw Prediction JSON (Colab / API Contract)</h3>
+                                <button type="button" id="btnCopyJson" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.75rem; width: auto; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); height: auto; display: flex; align-items: center; gap: 0.25rem;">
+                                    <span>📋</span> Copy JSON
+                                </button>
+                            </div>
+                            <pre style="background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; max-height: 250px; overflow-y: auto; text-align: left; font-family: 'Courier New', Courier, monospace; font-size: 0.8rem; color: #a7f3d0; white-space: pre-wrap; word-break: break-all; margin: 0;"><code id="rawJsonBlock">{}</code></pre>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE 3: Prediction Explainability -->
+        <div id="pageExplain" class="page-content">
+            <div class="panel" style="width: 100%;">
+                <h2 class="panel-title"><span class="icon">🔍</span> Prediction Explainability & Mathematical Breakdown</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem; font-size: 0.95rem;">
+                    Step-by-step breakdown of how the machine learning model calculated match probabilities and goal insights from the trained data.
+                </p>
+
+                <div id="explainPlaceholder" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                    <p style="font-size: 1.1rem; margin-bottom: 1rem;">No prediction has been run yet.</p>
+                    <button type="button" class="btn btn-secondary" style="max-width: 250px; margin: 0 auto;" onclick="switchPage('forecaster')">🔮 Go to Match Forecaster</button>
+                </div>
+
+                <div id="explainContent" style="display: none; flex-direction: column; gap: 2.5rem;">
+                    <!-- Step 1 -->
+                    <div style="background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
+                        <h3 style="font-size: 1.2rem; font-weight: 700; color: #ffffff; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="background-color: var(--accent-secondary); color: white; border-radius: 50%; width: 1.75rem; height: 1.75rem; display: inline-flex; align-items: center; justify-content: center; font-size: 0.9rem;">1</span>
+                            Step 1: Input Features & Team Profiles
+                        </h3>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.25rem;">
+                            The model fetches the latest rating and ranking profiles for both teams from the training dataset, then computes the difference features.
+                        </p>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+                            <!-- Home Team Profile Card -->
+                            <div style="background-color: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 0.75rem; padding: 1rem;">
+                                <h4 style="color: var(--accent-secondary); font-weight: 600; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.25rem;" id="expHomeTeam">Home Team</h4>
+                                <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                    <span style="color: var(--text-secondary);">Elo Rating:</span>
+                                    <span id="expHomeElo" style="font-weight: 700;">--</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                                    <span style="color: var(--text-secondary);">Elo Rank:</span>
+                                    <span id="expHomeRank" style="font-weight: 700;">--</span>
+                                </div>
+                            </div>
+                            <!-- Away Team Profile Card -->
+                            <div style="background-color: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 0.75rem; padding: 1rem;">
+                                <h4 style="color: var(--accent-primary); font-weight: 600; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.25rem;" id="expAwayTeam">Away Team</h4>
+                                <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                    <span style="color: var(--text-secondary);">Elo Rating:</span>
+                                    <span id="expAwayElo" style="font-weight: 700;">--</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                                    <span style="color: var(--text-secondary);">Elo Rank:</span>
+                                    <span id="expAwayRank" style="font-weight: 700;">--</span>
+                                </div>
+                            </div>
+                            <!-- Calculated Differences -->
+                            <div style="background-color: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 0.75rem; padding: 1rem;">
+                                <h4 style="color: var(--accent-gold); font-weight: 600; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.25rem;">Difference Features</h4>
+                                <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                    <span style="color: var(--text-secondary);">Elo Difference:</span>
+                                    <span id="expEloDiff" style="font-weight: 700;">--</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                                    <span style="color: var(--text-secondary);">Rank Difference:</span>
+                                    <span id="expRankDiff" style="font-weight: 700;">--</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div style="background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
+                        <h3 style="font-size: 1.2rem; font-weight: 700; color: #ffffff; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="background-color: var(--accent-secondary); color: white; border-radius: 50%; width: 1.75rem; height: 1.75rem; display: inline-flex; align-items: center; justify-content: center; font-size: 0.9rem;">2</span>
+                            Step 2: Expected Goals (Poisson Regression)
+                        </h3>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.25rem;">
+                            The computed difference features are fed into two independent <strong>Poisson Regressors</strong> (trained on all historical match goals). The regressors predict the expected goals (Poisson $\lambda$) for each team.
+                        </p>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+                            <div style="background-color: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 0.75rem; padding: 1.25rem; text-align: center;">
+                                <div style="font-size: 0.9rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Home Expected Goals ($\lambda_{home}$)</div>
+                                <div style="font-size: 2.5rem; font-weight: 800; color: var(--accent-secondary);" id="expHomeLambda">--</div>
+                                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">
+                                    Rounded to predicted score: <span id="expHomeRoundScore" style="font-weight: 700; color: #ffffff;">--</span>
+                                </p>
+                            </div>
+                            <div style="background-color: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 0.75rem; padding: 1.25rem; text-align: center;">
+                                <div style="font-size: 0.9rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Away Expected Goals ($\lambda_{away}$)</div>
+                                <div style="font-size: 2.5rem; font-weight: 800; color: var(--accent-primary);" id="expAwayLambda">--</div>
+                                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">
+                                    Rounded to predicted score: <span id="expAwayRoundScore" style="font-weight: 700; color: #ffffff;">--</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div style="background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
+                        <h3 style="font-size: 1.2rem; font-weight: 700; color: #ffffff; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="background-color: var(--accent-secondary); color: white; border-radius: 50%; width: 1.75rem; height: 1.75rem; display: inline-flex; align-items: center; justify-content: center; font-size: 0.9rem;">3</span>
+                            Step 3: Scoreline Probability Matrix (Joint Poisson)
+                        </h3>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.25rem;">
+                            Assuming goalscoring is independent, the joint probability of any scoreline $P(H=x, A=y)$ is the product of their individual Poisson probabilities: $P(H=x) \times P(A=y)$. Below is the calculated $6 \times 6$ probability table (%).
+                        </p>
+                        
+                        <!-- Heatmap Matrix Table -->
+                        <div style="overflow-x: auto; margin-bottom: 1.5rem; border: 1px solid var(--border-color); border-radius: 0.75rem; background-color: rgba(0,0,0,0.2);">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: center;" id="expMatrixTable">
+                                <thead>
+                                    <!-- Populated dynamically -->
+                                </thead>
+                                <tbody>
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div style="background-color: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 0.75rem; padding: 1.25rem;">
+                            <h4 style="font-size: 1rem; font-weight: 600; color: #ffffff; margin-bottom: 0.75rem;">Summing the Matrix for Outcome Probabilities:</h4>
+                            <ul style="padding-left: 1.25rem; font-size: 0.9rem; line-height: 1.6; color: var(--text-secondary);">
+                                <li><strong>Home Win:</strong> Sum of all cells below the main diagonal (where Home Goals > Away Goals) = <span id="expHomeWinSum" style="font-weight: 700; color: var(--accent-secondary);">--</span></li>
+                                <li><strong>Draw:</strong> Sum of all cells along the main diagonal (where Home Goals == Away Goals) = <span id="expDrawSum" style="font-weight: 700; color: var(--text-primary);">--</span></li>
+                                <li><strong>Away Win:</strong> Sum of all cells above the main diagonal (where Home Goals < Away Goals) = <span id="expAwayWinSum" style="font-weight: 700; color: var(--accent-primary);">--</span></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Step 4 -->
+                    <div style="background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1.5rem;">
+                        <h3 style="font-size: 1.2rem; font-weight: 700; color: #ffffff; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="background-color: var(--accent-secondary); color: white; border-radius: 50%; width: 1.75rem; height: 1.75rem; display: inline-flex; align-items: center; justify-content: center; font-size: 0.9rem;">4</span>
+                            Step 4: Goal Insights & Clean Sheet Mathematics
+                        </h3>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.25rem;">
+                            Clean sheet, both teams to score, and first goal probability calculations are derived directly from the expected goals parameters.
+                        </p>
+                        <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+                            <!-- BTTS Math -->
+                            <div style="background-color: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 0.75rem; padding: 1rem;">
+                                <h4 style="font-size: 0.95rem; font-weight: 600; color: #ffffff; margin-bottom: 0.5rem;">Both Teams to Score (BTTS)</h4>
+                                <p style="font-family: monospace; font-size: 0.85rem; color: var(--accent-gold); margin-bottom: 0.5rem;" id="expBttsFormula">Formula: P(H > 0) * P(A > 0) = (1 - e^-λ_H) * (1 - e^-λ_A)</p>
+                                <p style="font-size: 0.9rem; color: var(--text-secondary);" id="expBttsMath">Calculation: --</p>
+                            </div>
+                            <!-- Clean Sheet Math -->
+                            <div style="background-color: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 0.75rem; padding: 1rem;">
+                                <h4 style="font-size: 0.95rem; font-weight: 600; color: #ffffff; margin-bottom: 0.5rem;">Clean Sheets</h4>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; font-size: 0.9rem; color: var(--text-secondary);">
+                                    <div>
+                                        <p style="font-family: monospace; font-size: 0.85rem; color: var(--accent-gold); margin-bottom: 0.25rem;">Home CS: P(Away = 0) = e^-λ_away</p>
+                                        <span id="expHomeCsMath">Calculation: --</span>
+                                    </div>
+                                    <div>
+                                        <p style="font-family: monospace; font-size: 0.85rem; color: var(--accent-gold); margin-bottom: 0.25rem;">Away CS: P(Home = 0) = e^-λ_home</p>
+                                        <span id="expAwayCsMath">Calculation: --</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- First Goal Math -->
+                            <div style="background-color: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 0.75rem; padding: 1rem;">
+                                <h4 style="font-size: 0.95rem; font-weight: 600; color: #ffffff; margin-bottom: 0.5rem;">First Goal Team</h4>
+                                <p style="font-family: monospace; font-size: 0.85rem; color: var(--accent-gold); margin-bottom: 0.5rem;">Formula: λ_H / (λ_H + λ_A)</p>
+                                <p style="font-size: 0.9rem; color: var(--text-secondary);" id="expFirstGoalMath">Calculation: --</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE 2: Team Profiles Viewer -->
+        <div id="pageProfiles" class="page-content">
+            <div class="panel" style="width: 100%;">
+                <h2 class="panel-title">📊 Team Profiles Data</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem;">
+                    Analyze and verify computed ratings, Elo scores, FIFA ranks, rolling form points, and xG metrics for all teams in the active model.
+                </p>
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <input type="text" id="profileSearchInput" class="form-control" placeholder="Search team by name..." oninput="filterTeamProfiles()">
+                </div>
+                <div style="overflow-x: auto; border: 1px solid var(--border-color); border-radius: 0.75rem;">
+                    <table class="profile-table" id="teamProfilesTable">
+                        <thead>
+                            <tr>
+                                <th onclick="sortProfilesTable('team')">Team ↕️</th>
+                                <th onclick="sortProfilesTable('elo')">Elo Rating ↕️</th>
+                                <th onclick="sortProfilesTable('elo_rank')">Elo Rank ↕️</th>
+                                <th onclick="sortProfilesTable('fifa_rank')">FIFA Rank ↕️</th>
+                                <th onclick="sortProfilesTable('attack_rating')">Attack ↕️</th>
+                                <th onclick="sortProfilesTable('defense_rating')">Defense ↕️</th>
+                                <th onclick="sortProfilesTable('goals_avg')">Goals Avg ↕️</th>
+                                <th onclick="sortProfilesTable('xg_avg')">xG Avg ↕️</th>
+                                <th onclick="sortProfilesTable('clean_sheet_rate')">Clean Sheet % ↕️</th>
+                                <th onclick="sortProfilesTable('form_pts')">Form Pts ↕️</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teamProfilesBody">
+                            <!-- Dynamically populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <script>
+        const API_BASE = "";
+
+        // Elements
+        const trainForm = document.getElementById("trainForm");
+        const trainBtn = document.getElementById("trainBtn");
+        const trainBtnText = document.getElementById("trainBtnText");
+        const trainSpinner = document.getElementById("trainSpinner");
+        const trainToast = document.getElementById("trainToast");
+        const consoleOutput = document.getElementById("consoleOutput");
+        
+        const metricsPanel = document.getElementById("metricsPanel");
+        const metricAccuracy = document.getElementById("metricAccuracy");
+        const metricGoalsMae = document.getElementById("metricGoalsMae");
+
+        const predictForm = document.getElementById("predictForm");
+        const predictSpinner = document.getElementById("predictSpinner");
+        const homeTeamSelect = document.getElementById("homeTeam");
+        const awayTeamSelect = document.getElementById("awayTeam");
+        const predictionBox = document.getElementById("predictionBox");
+
+        // Scoreboard Elements
+        const scoreHomeTeam = document.getElementById("scoreHomeTeam");
+        const scoreAwayTeam = document.getElementById("scoreAwayTeam");
+        const scoreHome = document.getElementById("scoreHome");
+        const scoreAway = document.getElementById("scoreAway");
+
+        // Probability elements
+        const probBarHome = document.getElementById("probBarHome");
+        const probBarDraw = document.getElementById("probBarDraw");
+        const probBarAway = document.getElementById("probBarAway");
+        const labelHomeName = document.getElementById("labelHomeName");
+        const labelAwayName = document.getElementById("labelAwayName");
+        const valHomeProb = document.getElementById("valHomeProb");
+        const valDrawProb = document.getElementById("valDrawProb");
+        const valAwayProb = document.getElementById("valAwayProb");
+
+        // Insight elements
+        const insightFirstGoal = document.getElementById("insightFirstGoal");
+        const insightBtts = document.getElementById("insightBtts");
+        const homeCleanSheetLabel = document.getElementById("homeCleanSheetLabel");
+        const homeCleanSheetProb = document.getElementById("homeCleanSheetProb");
+        const awayCleanSheetLabel = document.getElementById("awayCleanSheetLabel");
+        const awayCleanSheetProb = document.getElementById("awayCleanSheetProb");
+
+        // Players lists
+        const homePlayersList = document.getElementById("homePlayersList");
+        const awayPlayersList = document.getElementById("awayPlayersList");
+
+        // Load available teams on startup
+        async function loadTeams() {
+            try {
+                const res = await fetch(`${API_BASE}/teams`);
+                if (!res.ok) throw new Error("Failed to load teams list");
+                const teams = await res.json();
+                
+                const curHome = homeTeamSelect.value;
+                const curAway = awayTeamSelect.value;
+
+                // Clear and populate dropdowns
+                homeTeamSelect.innerHTML = '<option value="">Select Home Team...</option>';
+                awayTeamSelect.innerHTML = '<option value="">Select Away Team...</option>';
+                
+                teams.forEach(team => {
+                    const opt1 = document.createElement("option");
+                    opt1.value = team;
+                    opt1.textContent = team;
+                    homeTeamSelect.appendChild(opt1);
+
+                    const opt2 = document.createElement("option");
+                    opt2.value = team;
+                    opt2.textContent = team;
+                    awayTeamSelect.appendChild(opt2);
+                });
+
+                if (teams.includes(curHome)) homeTeamSelect.value = curHome;
+                if (teams.includes(curAway)) awayTeamSelect.value = curAway;
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // Initialize
+        loadTeams();
+
+        // Load model version on startup
+        async function loadModelVersion() {
+            try {
+                const res = await fetch(`${API_BASE}/model-version`);
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById("modelVersionInput").value = data.version;
+                    updateVersionedDownloadLink(data.version);
+                }
+            } catch (err) {
+                console.error("Failed to load model version:", err);
+            }
+        }
+
+        function updateVersionedDownloadLink(ver) {
+            const link = document.getElementById("btnDownloadVersioned");
+            if (link) {
+                link.innerHTML = `<span>📦</span> Download Versioned Soccer Sense Model (v${ver})`;
+            }
+        }
+
+        // Add version manager event listeners
+        document.getElementById("btnIncrementVersion").addEventListener("click", () => {
+            const input = document.getElementById("modelVersionInput");
+            const parts = input.value.split(".");
+            if (parts.length === 3) {
+                const patch = parseInt(parts[2], 10);
+                if (!isNaN(patch)) {
+                    parts[2] = patch + 1;
+                    input.value = parts.join(".");
+                }
+            } else {
+                input.value = "1.0.1";
+            }
+        });
+
+        document.getElementById("btnUpdateVersion").addEventListener("click", async () => {
+            const versionInput = document.getElementById("modelVersionInput");
+            const version = versionInput.value.trim();
+            if (!version) {
+                alert("Please enter a valid version.");
+                return;
+            }
+            
+            const btn = document.getElementById("btnUpdateVersion");
+            btn.disabled = true;
+            btn.textContent = "Saving...";
+            
+            try {
+                const res = await fetch(`${API_BASE}/update-version`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ version: version })
+                });
+                
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || "Failed to update version");
+                }
+                
+                const data = await res.json();
+                alert(`Model version successfully updated to ${data.version}!`);
+                updateVersionedDownloadLink(data.version);
+            } catch (err) {
+                alert(`Error: ${err.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Update";
+            }
+        });
+
+        loadModelVersion();
+
+        // Tab switching for data ingestion (Web Crawler vs File Upload)
+        window.switchTab = function(tabName) {
+            const tabs = document.querySelectorAll(".tab-content");
+            const btns = document.querySelectorAll(".tab-btn");
+            
+            tabs.forEach(t => t.classList.remove("active"));
+            btns.forEach(b => b.classList.remove("active"));
+            
+            if (tabName === 'crawler') {
+                document.getElementById("crawlerTab").classList.add("active");
+                document.getElementById("btnCrawlerTab").classList.add("active");
+            } else {
+                document.getElementById("uploadTab").classList.add("active");
+                document.getElementById("btnUploadTab").classList.add("active");
+            }
+        };
+
+        // Main Page Tab Switching
+        let currentProfiles = [];
+        let sortColumn = "team";
+        let sortAscending = true;
+
+        window.switchPage = function(pageName) {
+            const pages = document.querySelectorAll(".page-content");
+            const navBtns = document.querySelectorAll(".nav-btn");
+            
+            pages.forEach(p => p.classList.remove("active"));
+            navBtns.forEach(b => b.classList.remove("active"));
+            
+            if (pageName === 'forecaster') {
+                document.getElementById("pageForecaster").classList.add("active");
+                document.getElementById("btnPageForecaster").classList.add("active");
+            } else if (pageName === 'explain') {
+                document.getElementById("pageExplain").classList.add("active");
+                document.getElementById("btnPageExplain").classList.add("active");
+            } else {
+                document.getElementById("pageProfiles").classList.add("active");
+                document.getElementById("btnPageProfiles").classList.add("active");
+                loadTeamProfiles();
+            }
+        };
+
+        async function loadTeamProfiles() {
+            try {
+                const res = await fetch(`${API_BASE}/team-profiles`);
+                if (!res.ok) throw new Error("Failed to load team profiles");
+                const profiles = await res.json();
+                currentProfiles = profiles ? Object.values(profiles) : [];
+                renderProfilesTable();
+            } catch (err) {
+                console.error(err);
+                document.getElementById("teamProfilesBody").innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--accent-danger); padding: 1.5rem;">Error loading profiles: ${err.message}</td></tr>`;
+            }
+        }
+
+        function renderProfilesTable() {
+            const search = document.getElementById("profileSearchInput").value.toLowerCase();
+            const filtered = currentProfiles.filter(p => p && p.team && p.team.toLowerCase().includes(search));
+            
+            filtered.sort((a, b) => {
+                let valA = a ? a[sortColumn] : undefined;
+                let valB = b ? b[sortColumn] : undefined;
+                
+                if (valA === undefined || valA === null) return 1;
+                if (valB === undefined || valB === null) return -1;
+                
+                if (typeof valA === "string") {
+                    const cmp = valA.localeCompare(valB);
+                    return sortAscending ? cmp : -cmp;
+                } else {
+                    return sortAscending ? valA - valB : valB - valA;
+                }
+            });
+            
+            const tbody = document.getElementById("teamProfilesBody");
+            tbody.innerHTML = "";
+            
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-muted); padding: 2rem;">No matching team profiles found.</td></tr>`;
+                return;
+            }
+            
+            filtered.forEach(p => {
+                const tr = document.createElement("tr");
+                const eloVal = (p.elo !== undefined && p.elo !== null && !isNaN(p.elo)) ? Number(p.elo).toFixed(1) : "--";
+                const rankVal = (p.elo_rank !== undefined && p.elo_rank !== null && !isNaN(p.elo_rank)) ? Number(p.elo_rank).toFixed(0) : "--";
+                const fifaRankVal = (p.fifa_rank !== undefined && p.fifa_rank !== null && !isNaN(p.fifa_rank)) ? Number(p.fifa_rank).toFixed(0) : "--";
+                const attackVal = (p.attack_rating !== undefined && p.attack_rating !== null && !isNaN(p.attack_rating)) ? Number(p.attack_rating).toFixed(1) : "--";
+                const defenseVal = (p.defense_rating !== undefined && p.defense_rating !== null && !isNaN(p.defense_rating)) ? Number(p.defense_rating).toFixed(1) : "--";
+                const goalsVal = (p.goals_avg !== undefined && p.goals_avg !== null && !isNaN(p.goals_avg)) ? Number(p.goals_avg).toFixed(2) : "--";
+                const xgVal = (p.xg_avg !== undefined && p.xg_avg !== null && !isNaN(p.xg_avg)) ? Number(p.xg_avg).toFixed(2) : "--";
+                const csVal = (p.clean_sheet_rate !== undefined && p.clean_sheet_rate !== null && !isNaN(p.clean_sheet_rate)) 
+                    ? (Number(p.clean_sheet_rate) > 1.0 ? Number(p.clean_sheet_rate).toFixed(1) : (Number(p.clean_sheet_rate) * 100).toFixed(1)) + "%" 
+                    : "--";
+                const formVal = (p.form_pts !== undefined && p.form_pts !== null && !isNaN(p.form_pts)) ? Number(p.form_pts).toFixed(1) : "--";
+
+                tr.innerHTML = `
+                    <td style="font-weight: 600; color: var(--accent-secondary);">${p.team}</td>
+                    <td>${eloVal}</td>
+                    <td>${rankVal}</td>
+                    <td>${fifaRankVal}</td>
+                    <td>${attackVal}</td>
+                    <td>${defenseVal}</td>
+                    <td>${goalsVal}</td>
+                    <td>${xgVal}</td>
+                    <td>${csVal}</td>
+                    <td>${formVal}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        window.filterTeamProfiles = function() {
+            renderProfilesTable();
+        };
+
+        window.sortProfilesTable = function(column) {
+            if (sortColumn === column) {
+                sortAscending = !sortAscending;
+            } else {
+                sortColumn = column;
+                sortAscending = true;
+            }
+            renderProfilesTable();
+        };
+
+        // Upload Form submission
+        const uploadForm = document.getElementById("uploadForm");
+        const uploadBtn = document.getElementById("uploadBtn");
+        const uploadBtnText = document.getElementById("uploadBtnText");
+        const uploadSpinner = document.getElementById("uploadSpinner");
+
+        uploadForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            
+            const matchesFiles = document.getElementById("matchesFile").files;
+            const playersFiles = document.getElementById("playersFile").files;
+            
+            if (matchesFiles.length === 0 && playersFiles.length === 0) {
+                alert("Please select at least one file to upload (matches or players).");
+                return;
+            }
+            
+            uploadSpinner.style.display = "inline-block";
+            uploadBtnText.textContent = "Uploading & Training...";
+            uploadBtn.disabled = true;
+            trainToast.style.display = "none";
+            consoleOutput.style.display = "block";
+            consoleOutput.innerHTML = "> Preparing files for upload...\n";
+            
+            const formData = new FormData();
+            for (let i = 0; i < matchesFiles.length; i++) {
+                formData.append("matches_files", matchesFiles[i]);
+                consoleOutput.innerHTML += `> Matches file: ${matchesFiles[i].name}\n`;
+            }
+            for (let i = 0; i < playersFiles.length; i++) {
+                formData.append("players_files", playersFiles[i]);
+                consoleOutput.innerHTML += `> Players file: ${playersFiles[i].name}\n`;
+            }
+            
+            try {
+                const res = await fetch(`${API_BASE}/train-from-upload`, {
+                    method: "POST",
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    const errDetail = await res.json();
+                    throw new Error(errDetail.detail || "Upload and training failed");
+                }
+
+                const data = await res.json();
+                
+                consoleOutput.innerHTML += `> Status: ${data.status}\n`;
+                if (data.version) {
+                    document.getElementById("modelVersionInput").value = data.version;
+                    updateVersionedDownloadLink(data.version);
+                }
+                consoleOutput.innerHTML += `> Uploaded matches count: ${data.uploaded_matches}\n`;
+                consoleOutput.innerHTML += `> Uploaded players count: ${data.uploaded_players}\n`;
+                consoleOutput.innerHTML += `> Models retrained (Dev on 75/25 split, Production on 100% data)!\n`;
+
+                showToast(trainToast, "Models retrained successfully! The production model was fit on 100% of the data to maximize accuracy.", "success");
+                
+                metricAccuracy.textContent = (data.metrics && data.metrics.result_accuracy !== undefined && data.metrics.result_accuracy !== null) ? `${(data.metrics.result_accuracy * 100).toFixed(1)}%` : "--";
+                const avgMae = (data.metrics && data.metrics.home_goals_mae !== undefined && data.metrics.away_goals_mae !== undefined) ? ((data.metrics.home_goals_mae + data.metrics.away_goals_mae) / 2) : null;
+                metricGoalsMae.textContent = (avgMae !== null && !isNaN(avgMae)) ? avgMae.toFixed(2) : "--";
+                metricsPanel.style.display = "grid";
+
+                // Handle Warnings & Validation Grid
+                const warningBox = document.getElementById("warningBox");
+                const warningsList = document.getElementById("warningsList");
+                const validationGrid = document.getElementById("validationGrid");
+                const validationGridSection = document.getElementById("validationGridSection");
+                
+                warningsList.innerHTML = "";
+                validationGrid.innerHTML = "";
+                let hasWarnings = false;
+                let hasMissingCols = false;
+                
+                if (data.warnings && data.warnings.length > 0) {
+                    data.warnings.forEach(w => {
+                        const li = document.createElement("li");
+                        li.textContent = w;
+                        warningsList.appendChild(li);
+                    });
+                    hasWarnings = true;
+                }
+                
+                if (data.player_validation_status) {
+                    validationGridSection.style.display = "block";
+                    Object.entries(data.player_validation_status).forEach(([col, present]) => {
+                        const item = document.createElement("div");
+                        item.style.display = "flex";
+                        item.style.alignItems = "center";
+                        item.style.gap = "0.25rem";
+                        item.style.padding = "0.25rem 0.5rem";
+                        item.style.borderRadius = "0.375rem";
+                        item.style.background = present ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 44, 44, 0.1)";
+                        item.style.border = present ? "1px solid rgba(16, 185, 129, 0.2)" : "1px solid rgba(239, 44, 44, 0.2)";
+                        item.style.color = present ? "#34d399" : "#f87171";
+                        
+                        item.innerHTML = `
+                            <span>${present ? "🟢" : "⚠️"}</span>
+                            <span style="font-weight: 500;">${col}</span>
+                        `;
+                        validationGrid.appendChild(item);
+                        if (!present) {
+                            hasMissingCols = true;
+                        }
+                    });
+                } else {
+                    validationGridSection.style.display = "none";
+                }
+                
+                const showWarningBox = hasWarnings || hasMissingCols || (data.player_validation_status !== null);
+                
+                if (showWarningBox) {
+                    warningBox.style.display = "block";
+                    const isScary = hasWarnings || hasMissingCols;
+                    if (isScary) {
+                        warningBox.style.backgroundColor = "rgba(245, 158, 11, 0.12)";
+                        warningBox.style.borderColor = "rgba(245, 158, 11, 0.35)";
+                        warningBox.style.color = "#fbbf24";
+                        warningBox.querySelector("h4").innerHTML = "<span>⚠️</span> Data Validation Warnings";
+                        validationGridSection.style.borderTopColor = "rgba(245, 158, 11, 0.25)";
+                    } else {
+                        warningBox.style.backgroundColor = "rgba(16, 185, 129, 0.12)";
+                        warningBox.style.borderColor = "rgba(16, 185, 129, 0.35)";
+                        warningBox.style.color = "#34d399";
+                        warningBox.querySelector("h4").innerHTML = "<span>✅</span> Player Data Schema Verified";
+                        validationGridSection.style.borderTopColor = "rgba(16, 185, 129, 0.25)";
+                    }
+                } else {
+                    warningBox.style.display = "none";
+                }
+
+                loadTeams();
+                loadTeamProfiles(); // reload data table too
+
+            } catch (err) {
+                consoleOutput.innerHTML += `> Error occurred: ${err.message}\n`;
+                showToast(trainToast, `Retraining failed: ${err.message}`, "error");
+            } finally {
+                uploadSpinner.style.display = "none";
+                uploadBtnText.textContent = "Upload & Retrain Models";
+                uploadBtn.disabled = false;
+            }
+        });
+
+        // Train Form submission
+        trainForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            
+            const matchesUrl = document.getElementById("matchesUrl").value;
+            const playersUrl = document.getElementById("playersUrl").value;
+            
+            if (!matchesUrl.trim() && !playersUrl.trim()) {
+                alert("Please enter at least one URL (Matches or Players) to crawl.");
+                return;
+            }
+
+            // UI State
+            trainSpinner.style.display = "inline-block";
+            trainBtnText.textContent = "Ingesting & Training...";
+            trainBtn.disabled = true;
+            trainToast.style.display = "none";
+            consoleOutput.style.display = "block";
+            consoleOutput.innerHTML = "> Initiating crawler...\n";
+            
+            try {
+                if (matchesUrl.trim()) consoleOutput.innerHTML += `> Matches URL: ${matchesUrl.substring(0, 50)}...\n`;
+                if (playersUrl.trim()) consoleOutput.innerHTML += `> Players URL: ${playersUrl.substring(0, 50)}...\n`;
+                
+                const res = await fetch(`${API_BASE}/train-from-url`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ matches_url: matchesUrl, players_url: playersUrl })
+                });
+
+                if (!res.ok) {
+                    const errDetail = await res.json();
+                    throw new Error(errDetail.detail || "Training failed");
+                }
+
+                const data = await res.json();
+                
+                consoleOutput.innerHTML += `> Status: ${data.status}\n`;
+                if (data.version) {
+                    document.getElementById("modelVersionInput").value = data.version;
+                    updateVersionedDownloadLink(data.version);
+                }
+                consoleOutput.innerHTML += `> Scraped matches count: ${data.scraped_matches}\n`;
+                consoleOutput.innerHTML += `> Scraped players count: ${data.scraped_players}\n`;
+                consoleOutput.innerHTML += `> Models retrained (Dev on 75/25 split, Production on 100% data)!\n`;
+
+                showToast(trainToast, "Models retrained successfully! The production model was fit on 100% of the data to maximize accuracy.", "success");
+                
+                metricAccuracy.textContent = (data.metrics && data.metrics.result_accuracy !== undefined && data.metrics.result_accuracy !== null) ? `${(data.metrics.result_accuracy * 100).toFixed(1)}%` : "--";
+                const avgMae = (data.metrics && data.metrics.home_goals_mae !== undefined && data.metrics.away_goals_mae !== undefined) ? ((data.metrics.home_goals_mae + data.metrics.away_goals_mae) / 2) : null;
+                metricGoalsMae.textContent = (avgMae !== null && !isNaN(avgMae)) ? avgMae.toFixed(2) : "--";
+                metricsPanel.style.display = "grid";
+
+                // Handle Warnings & Validation Grid
+                const warningBox = document.getElementById("warningBox");
+                const warningsList = document.getElementById("warningsList");
+                const validationGrid = document.getElementById("validationGrid");
+                const validationGridSection = document.getElementById("validationGridSection");
+                
+                warningsList.innerHTML = "";
+                validationGrid.innerHTML = "";
+                let hasWarnings = false;
+                let hasMissingCols = false;
+                
+                if (data.warnings && data.warnings.length > 0) {
+                    data.warnings.forEach(w => {
+                        const li = document.createElement("li");
+                        li.textContent = w;
+                        warningsList.appendChild(li);
+                    });
+                    hasWarnings = true;
+                }
+                
+                if (data.player_validation_status) {
+                    validationGridSection.style.display = "block";
+                    Object.entries(data.player_validation_status).forEach(([col, present]) => {
+                        const item = document.createElement("div");
+                        item.style.display = "flex";
+                        item.style.alignItems = "center";
+                        item.style.gap = "0.25rem";
+                        item.style.padding = "0.25rem 0.5rem";
+                        item.style.borderRadius = "0.375rem";
+                        item.style.background = present ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 44, 44, 0.1)";
+                        item.style.border = present ? "1px solid rgba(16, 185, 129, 0.2)" : "1px solid rgba(239, 44, 44, 0.2)";
+                        item.style.color = present ? "#34d399" : "#f87171";
+                        
+                        item.innerHTML = `
+                            <span>${present ? "🟢" : "⚠️"}</span>
+                            <span style="font-weight: 500;">${col}</span>
+                        `;
+                        validationGrid.appendChild(item);
+                        if (!present) {
+                            hasMissingCols = true;
+                        }
+                    });
+                } else {
+                    validationGridSection.style.display = "none";
+                }
+                
+                const showWarningBox = hasWarnings || hasMissingCols || (data.player_validation_status !== null);
+                
+                if (showWarningBox) {
+                    warningBox.style.display = "block";
+                    const isScary = hasWarnings || hasMissingCols;
+                    if (isScary) {
+                        warningBox.style.backgroundColor = "rgba(245, 158, 11, 0.12)";
+                        warningBox.style.borderColor = "rgba(245, 158, 11, 0.35)";
+                        warningBox.style.color = "#fbbf24";
+                        warningBox.querySelector("h4").innerHTML = "<span>⚠️</span> Data Validation Warnings";
+                        validationGridSection.style.borderTopColor = "rgba(245, 158, 11, 0.25)";
+                    } else {
+                        warningBox.style.backgroundColor = "rgba(16, 185, 129, 0.12)";
+                        warningBox.style.borderColor = "rgba(16, 185, 129, 0.35)";
+                        warningBox.style.color = "#34d399";
+                        warningBox.querySelector("h4").innerHTML = "<span>✅</span> Player Data Schema Verified";
+                        validationGridSection.style.borderTopColor = "rgba(16, 185, 129, 0.25)";
+                    }
+                } else {
+                    warningBox.style.display = "none";
+                }
+
+                loadTeams();
+                loadTeamProfiles(); // reload data table too
+
+            } catch (err) {
+                consoleOutput.innerHTML += `> Error occurred: ${err.message}\n`;
+                showToast(trainToast, `Retraining failed: ${err.message}`, "error");
+            } finally {
+                trainSpinner.style.display = "none";
+                trainBtnText.textContent = "Crawl & Retrain Models";
+                trainBtn.disabled = false;
+            }
+        });
+
+        function populateExplainability(exp) {
+            if (!exp) return;
+            
+            // Hide placeholder, show content
+            document.getElementById("explainPlaceholder").style.display = "none";
+            document.getElementById("explainContent").style.display = "flex";
+            document.getElementById("btnPageExplain").style.display = "inline-block";
+            
+            // Step 1: Profiles
+            const homeElo = exp.step1_profiles?.home?.elo;
+            const homeRank = exp.step1_profiles?.home?.rank;
+            const awayElo = exp.step1_profiles?.away?.elo;
+            const awayRank = exp.step1_profiles?.away?.rank;
+            const eloDiff = exp.step1_profiles?.differences?.elo_diff;
+            const rankDiff = exp.step1_profiles?.differences?.rank_diff;
+
+            document.getElementById("expHomeTeam").textContent = exp.step1_profiles?.home?.team || "--";
+            document.getElementById("expAwayTeam").textContent = exp.step1_profiles?.away?.team || "--";
+            
+            document.getElementById("expHomeElo").textContent = (homeElo !== undefined && homeElo !== null && !isNaN(homeElo)) ? Number(homeElo).toFixed(1) : "--";
+            document.getElementById("expHomeRank").textContent = homeRank !== undefined ? homeRank : "--";
+            document.getElementById("expAwayElo").textContent = (awayElo !== undefined && awayElo !== null && !isNaN(awayElo)) ? Number(awayElo).toFixed(1) : "--";
+            document.getElementById("expAwayRank").textContent = awayRank !== undefined ? awayRank : "--";
+            
+            document.getElementById("expEloDiff").textContent = (eloDiff !== undefined && eloDiff !== null && !isNaN(eloDiff)) ? ((eloDiff >= 0 ? "+" : "") + Number(eloDiff).toFixed(1)) : "--";
+            document.getElementById("expRankDiff").textContent = rankDiff !== undefined ? ((rankDiff >= 0 ? "+" : "") + rankDiff) : "--";
+            
+            // Step 2: Expected Goals
+            const homeLambda = exp.step2_expected_goals?.home_lambda;
+            const awayLambda = exp.step2_expected_goals?.away_lambda;
+            document.getElementById("expHomeLambda").textContent = (homeLambda !== undefined && homeLambda !== null && !isNaN(homeLambda)) ? Number(homeLambda).toFixed(3) : "--";
+            document.getElementById("expAwayLambda").textContent = (awayLambda !== undefined && awayLambda !== null && !isNaN(awayLambda)) ? Number(awayLambda).toFixed(3) : "--";
+            
+            document.getElementById("expHomeRoundScore").textContent = `${exp.step1_profiles?.home?.team || "Home"} (${exp.step2_expected_goals?.home_score} goals)`;
+            document.getElementById("expAwayRoundScore").textContent = `${exp.step1_profiles?.away?.team || "Away"} (${exp.step2_expected_goals?.away_score} goals)`;
+            
+            // Step 3: Matrix Table
+            const hTeam = exp.step1_profiles?.home?.team || "Home";
+            const aTeam = exp.step1_profiles?.away?.team || "Away";
+            const matrix = exp.step3_joint_distribution?.score_matrix_6x6 || [];
+            
+            const table = document.getElementById("expMatrixTable");
+            
+            // Header
+            let thead = `<tr><th style="border-right: 1px solid var(--border-color); background: rgba(0,0,0,0.3); font-weight:700; padding: 0.75rem 0.5rem;">${hTeam} \\ ${aTeam}</th>`;
+            for (let a = 0; a < 6; a++) {
+                thead += `<th style="background: rgba(0,0,0,0.2); font-weight:700; color: var(--accent-primary); padding: 0.75rem 0.5rem;">${a} Goal${a !== 1 ? "s" : ""}</th>`;
+            }
+            thead += "</tr>";
+            table.querySelector("thead").innerHTML = thead;
+            
+            // Body
+            let tbody = "";
+            for (let h = 0; h < 6; h++) {
+                tbody += `<tr><td style="font-weight: 700; border-right: 1px solid var(--border-color); background: rgba(0,0,0,0.2); color: var(--accent-secondary); padding: 0.75rem 0.5rem;">${h} Goal${h !== 1 ? "s" : ""}</td>`;
+                for (let a = 0; a < 6; a++) {
+                    const prob = (matrix[h] && matrix[h][a] !== undefined) ? matrix[h][a] : 0;
+                    
+                    // Highlight logic
+                    let cellStyle = "";
+                    let isPredictedScore = (h === exp.step2_expected_goals?.home_score && a === exp.step2_expected_goals?.away_score);
+                    
+                    if (isPredictedScore) {
+                        cellStyle = "background-color: rgba(245, 158, 11, 0.25); border: 2px solid var(--accent-gold); font-weight: 800; color: #ffffff;";
+                    } else if (h === a) {
+                        // Draw diagonal
+                        cellStyle = "background-color: rgba(255, 255, 255, 0.03);";
+                    } else if (h > a) {
+                        // Home Win
+                        cellStyle = "background-color: rgba(59, 130, 246, 0.02);";
+                    } else {
+                        // Away Win
+                        cellStyle = "background-color: rgba(16, 185, 129, 0.02);";
+                    }
+                    
+                    tbody += `<td style="padding: 0.75rem 0.5rem; border-bottom: 1px solid var(--border-color); ${cellStyle}">${(prob !== undefined && prob !== null) ? Number(prob).toFixed(2) : "0.00"}%</td>`;
+                }
+                tbody += "</tr>";
+            }
+            table.querySelector("tbody").innerHTML = tbody;
+            
+            // Sums
+            const hWinRaw = exp.step3_joint_distribution?.home_win_raw;
+            const drawRaw = exp.step3_joint_distribution?.draw_raw;
+            const aWinRaw = exp.step3_joint_distribution?.away_win_raw;
+            document.getElementById("expHomeWinSum").textContent = (hWinRaw !== undefined && hWinRaw !== null && !isNaN(hWinRaw)) ? `${Number(hWinRaw).toFixed(1)}%` : "--";
+            document.getElementById("expDrawSum").textContent = (drawRaw !== undefined && drawRaw !== null && !isNaN(drawRaw)) ? `${Number(drawRaw).toFixed(1)}%` : "--";
+            document.getElementById("expAwayWinSum").textContent = (aWinRaw !== undefined && aWinRaw !== null && !isNaN(aWinRaw)) ? `${Number(aWinRaw).toFixed(1)}%` : "--";
+            
+            // Step 4: Math details
+            // BTTS
+            const btts = exp.step4_insights_math?.btts;
+            if (btts && btts.home_factor !== undefined && btts.away_factor !== undefined && btts.result !== undefined) {
+                document.getElementById("expBttsMath").innerHTML = `Calculation: (1 - e<sup>-${homeLambda}</sup>) * (1 - e<sup>-${awayLambda}</sup>)<br>= ${Number(btts.home_factor).toFixed(1)}% * ${Number(btts.away_factor).toFixed(1)}%<br>= <strong>${Number(btts.result).toFixed(1)}%</strong> BTTS Probability (Predicted: ${btts.result >= 50 ? "Yes" : "No"})`;
+            } else {
+                document.getElementById("expBttsMath").innerHTML = "--";
+            }
+            
+            // CS
+            const cs = exp.step4_insights_math?.clean_sheets;
+            if (cs && cs.home_cs_prob !== undefined && cs.away_cs_prob !== undefined) {
+                document.getElementById("expHomeCsMath").innerHTML = `Calculation: e<sup>-${awayLambda}</sup><br>= <strong>${Number(cs.home_cs_prob).toFixed(1)}%</strong> CS Probability (Predicted: ${cs.home_cs_prob >= 50 ? "Yes" : "No"})`;
+                document.getElementById("expAwayCsMath").innerHTML = `Calculation: e<sup>-${homeLambda}</sup><br>= <strong>${Number(cs.away_cs_prob).toFixed(1)}%</strong> CS Probability (Predicted: ${cs.away_cs_prob >= 50 ? "Yes" : "No"})`;
+            } else {
+                document.getElementById("expHomeCsMath").innerHTML = "--";
+                document.getElementById("expAwayCsMath").innerHTML = "--";
+            }
+            
+            // First Goal
+            const fg = exp.step4_insights_math?.first_goal;
+            if (fg && fg.home_prob !== undefined && fg.away_prob !== undefined) {
+                document.getElementById("expFirstGoalMath").innerHTML = `Calculation: ${homeLambda} / (${homeLambda} + ${awayLambda})<br>= Home: <strong>${Number(fg.home_prob).toFixed(1)}%</strong>, Away: <strong>${Number(fg.away_prob).toFixed(1)}%</strong><br>Predicted First to Score: <strong>${fg.home_prob >= 50 ? hTeam : aTeam}</strong>`;
+            } else {
+                document.getElementById("expFirstGoalMath").innerHTML = "--";
+            }
+        }
+
+        // Predict Form Submission
+        predictForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            
+            const home = homeTeamSelect.value;
+            const away = awayTeamSelect.value;
+            
+            if (home === away) {
+                alert("Home team and Away team must be different.");
+                return;
+            }
+
+            predictSpinner.style.display = "inline-block";
+            predictForm.querySelector("button").disabled = true;
+
+            try {
+                const res = await fetch(`${API_BASE}/predict`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ home_team: home, away_team: away })
+                });
+
+                if (!res.ok) {
+                    const errDetail = await res.json();
+                    throw new Error(errDetail.detail || "Prediction failed");
+                }
+
+                const result = await res.json();
+                const output = result.output;
+
+                // Update scoreboard
+                scoreHomeTeam.textContent = output.score_prediction.predicted_scoreline.home_team;
+                scoreAwayTeam.textContent = output.score_prediction.predicted_scoreline.away_team;
+                scoreHome.textContent = output.score_prediction.predicted_scoreline.home_goals;
+                scoreAway.textContent = output.score_prediction.predicted_scoreline.away_goals;
+
+                // Win probabilities
+                const winProbs = output.match_prediction.win_probabilities;
+                const homeProb = winProbs.home_team.probability;
+                const drawProb = winProbs.draw.probability;
+                const awayProb = winProbs.away_team.probability;
+
+                probBarHome.style.width = `${homeProb}%`;
+                probBarHome.textContent = homeProb >= 10 ? `${homeProb}%` : "";
+                probBarDraw.style.width = `${drawProb}%`;
+                probBarDraw.textContent = drawProb >= 10 ? `${drawProb}%` : "";
+                probBarAway.style.width = `${awayProb}%`;
+                probBarAway.textContent = awayProb >= 10 ? `${awayProb}%` : "";
+
+                labelHomeName.textContent = winProbs.home_team.team;
+                labelAwayName.textContent = winProbs.away_team.team;
+                const formatProb = (p) => p === "Data Unavailable" ? "Data Unavailable" : `${p}%`;
+                valHomeProb.textContent = formatProb(homeProb);
+                valDrawProb.textContent = formatProb(drawProb);
+                valAwayProb.textContent = formatProb(awayProb);
+
+                // Goal insights
+                if (output.goal_insights.first_team_to_score.probability === "Data Unavailable") {
+                    insightFirstGoal.textContent = "Data Unavailable";
+                } else {
+                    insightFirstGoal.textContent = `${output.goal_insights.first_team_to_score.team} (${output.goal_insights.first_team_to_score.probability}%)`;
+                }
+
+                if (output.goal_insights.both_teams_to_score.probability === "Data Unavailable") {
+                    insightBtts.textContent = "Data Unavailable";
+                } else {
+                    insightBtts.textContent = `${output.goal_insights.both_teams_to_score.prediction ? "Yes" : "No"} (${output.goal_insights.both_teams_to_score.probability}%)`;
+                }
+
+                // Clean Sheets
+                const homeCS = output.player_prediction.home_team.clean_sheet_prediction;
+                const awayCS = output.player_prediction.away_team.clean_sheet_prediction;
+                homeCleanSheetLabel.textContent = `${winProbs.home_team.team} CS:`;
+                if (homeCS.probability === "Data Unavailable") {
+                    homeCleanSheetProb.textContent = "Data Unavailable";
+                } else {
+                    homeCleanSheetProb.textContent = `${homeCS.prediction ? "Yes" : "No"} (${homeCS.probability}%)`;
+                }
+
+                awayCleanSheetLabel.textContent = `${winProbs.away_team.team} CS:`;
+                if (awayCS.probability === "Data Unavailable") {
+                    awayCleanSheetProb.textContent = "Data Unavailable";
+                } else {
+                    awayCleanSheetProb.textContent = `${awayCS.prediction ? "Yes" : "No"} (${awayCS.probability}%)`;
+                }
+
+                // Home Players Goal Threats
+                homePlayersList.innerHTML = "";
+                const homePlayers = Array.isArray(output.player_prediction.home_team.goal) ? output.player_prediction.home_team.goal : [];
+                if (homePlayers.length === 0) {
+                     homePlayersList.innerHTML = "<li>No threat data available</li>";
+                } else {
+                    homePlayers.forEach(p => {
+                        const li = document.createElement("li");
+                        li.className = "player-prediction-item";
+                        li.style.padding = "0.75rem 0.5rem";
+                        li.style.borderBottom = "1px solid rgba(255, 255, 255, 0.05)";
+                        const bestPred = p.predictions[0] || { goal_count: 1, probability: 0 };
+                        
+                        let statsHtml = "";
+                        if (p.mins !== undefined && p.mins !== null) {
+                            statsHtml = `<span style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-top: 0.15rem;">Mins: ${p.mins} | xG/90: ${p.xg_x90} | Goals/90: ${p.goals_x90} | Conv: ${p.conv_pct}%</span>`;
+                        }
+                        li.innerHTML = `
+                            <div style="display: flex; flex-direction: column; width: 100%;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                    <span class="player-name" style="font-weight: 600; color: var(--text-primary);">${p.name}</span> 
+                                    <span class="player-prob" style="font-weight: 700; color: var(--accent-gold); font-size: 0.85rem;">${bestPred.probability}% to score ${bestPred.goal_count}+</span>
+                                </div>
+                                ${statsHtml}
+                            </div>
+                        `;
+                        homePlayersList.appendChild(li);
+                    });
+                }
+
+                // Away Players Goal Threats
+                awayPlayersList.innerHTML = "";
+                const awayPlayers = Array.isArray(output.player_prediction.away_team.goal) ? output.player_prediction.away_team.goal : [];
+                if (awayPlayers.length === 0) {
+                    awayPlayersList.innerHTML = "<li>No threat data available</li>";
+                } else {
+                    awayPlayers.forEach(p => {
+                        const li = document.createElement("li");
+                        li.className = "player-prediction-item";
+                        li.style.padding = "0.75rem 0.5rem";
+                        li.style.borderBottom = "1px solid rgba(255, 255, 255, 0.05)";
+                        const bestPred = p.predictions[0] || { goal_count: 1, probability: 0 };
+                        
+                        let statsHtml = "";
+                        if (p.mins !== undefined && p.mins !== null) {
+                            statsHtml = `<span style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-top: 0.15rem;">Mins: ${p.mins} | xG/90: ${p.xg_x90} | Goals/90: ${p.goals_x90} | Conv: ${p.conv_pct}%</span>`;
+                        }
+                        li.innerHTML = `
+                            <div style="display: flex; flex-direction: column; width: 100%;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                    <span class="player-name" style="font-weight: 600; color: var(--text-primary);">${p.name}</span> 
+                                    <span class="player-prob" style="font-weight: 700; color: var(--accent-gold); font-size: 0.85rem;">${bestPred.probability}% to score ${bestPred.goal_count}+</span>
+                                </div>
+                                ${statsHtml}
+                            </div>
+                        `;
+                        awayPlayersList.appendChild(li);
+                    });
+                }
+
+                // Show predictions
+                predictionBox.style.display = "block";
+
+                // Populate Raw JSON block
+                document.getElementById("rawJsonBlock").textContent = JSON.stringify(result, null, 2);
+
+                // Populate explainability breakdown page
+                populateExplainability(output.explanation_steps);
+
+            } catch (err) {
+                alert(`Prediction failed: ${err.message}`);
+            } finally {
+                predictSpinner.style.display = "none";
+                predictForm.querySelector("button").disabled = false;
+            }
+        });
+
+        // Copy JSON Button Handler
+        const btnCopyJson = document.getElementById("btnCopyJson");
+        if (btnCopyJson) {
+            btnCopyJson.addEventListener("click", () => {
+                const codeBlock = document.getElementById("rawJsonBlock");
+                if (codeBlock) {
+                    navigator.clipboard.writeText(codeBlock.textContent)
+                        .then(() => {
+                            const originalText = btnCopyJson.innerHTML;
+                            btnCopyJson.innerHTML = "<span>✔️</span> Copied!";
+                            setTimeout(() => {
+                                btnCopyJson.innerHTML = originalText;
+                            }, 2000);
+                        })
+                        .catch(err => {
+                            console.error("Failed to copy JSON: ", err);
+                            alert("Failed to copy JSON to clipboard.");
+                        });
+                }
+            });
+        }
+
+        // Reset Button Handler
+        const resetBtn = document.getElementById("resetBtn");
+        resetBtn.addEventListener("click", async () => {
+            if (!confirm("Are you sure you want to delete all uploaded/crawled team & player records and reset to clean system defaults?")) {
+                return;
+            }
+            
+            resetBtn.disabled = true;
+            resetBtn.innerHTML = "<span>🔄</span> Resetting System...";
+            consoleOutput.style.display = "block";
+            consoleOutput.innerHTML = "> Initiating system reset...\n";
+            trainToast.style.display = "none";
+            
+            try {
+                const res = await fetch(`${API_BASE}/reset`, {
+                    method: "POST"
+                });
+                
+                if (!res.ok) {
+                    const errDetail = await res.json();
+                    throw new Error(errDetail.detail || "Reset failed");
+                }
+                
+                const data = await res.json();
+                consoleOutput.innerHTML += `> Status: ${data.status}\n`;
+                consoleOutput.innerHTML += `> ${data.message}\n`;
+                
+                showToast(trainToast, data.message, "success");
+                
+                // Reload UI elements
+                loadTeams();
+                loadTeamProfiles();
+                
+                // Hide metrics panel, warning box, prediction results since we reset
+                document.getElementById("metricsPanel").style.display = "none";
+                document.getElementById("warningBox").style.display = "none";
+                document.getElementById("predictionBox").style.display = "none";
+                document.getElementById("rawJsonBlock").textContent = "{}";
+                document.getElementById("explainContent").style.display = "none";
+                document.getElementById("explainPlaceholder").style.display = "block";
+                document.getElementById("btnPageExplain").style.display = "none";
+                
+                // Reset predictForm selection dropdowns
+                document.getElementById("predictForm").reset();
+                
+            } catch (err) {
+                consoleOutput.innerHTML += `> Reset Error: ${err.message}\n`;
+                showToast(trainToast, `Reset failed: ${err.message}`, "error");
+            } finally {
+                resetBtn.disabled = false;
+                resetBtn.innerHTML = "<span>🔄</span> Reset Model & Data to Defaults";
+            }
+        });
+
+        function showToast(elem, message, type) {
+            elem.textContent = message;
+            elem.className = `toast toast-${type}`;
+            elem.style.display = "block";
+        }
+    </script>
+</body>
+</html>

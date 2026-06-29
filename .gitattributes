@@ -1,0 +1,9 @@
+# Treat pickle files as binary to prevent Git from altering line endings and corrupting the models
+*.pkl binary
+
+# Force standard LF endings for CSV and python source files
+*.csv text eol=lf
+*.py text eol=lf
+*.json text eol=lf
+*.html text eol=lf
+*.css text eol=lf
