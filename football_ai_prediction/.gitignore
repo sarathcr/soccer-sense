@@ -3,6 +3,7 @@
 
 # Re-include only the files and folders we want to track
 !/.gitignore
+!/.gitattributes
 !/.vercelignore
 !/README.md
 !/requirements.txt
@@ -18,6 +19,7 @@
 
 !/models/
 !/models/.gitkeep
+!/models/*.pkl
 
 !/scratch/
 !/scratch/refactor_train.py
