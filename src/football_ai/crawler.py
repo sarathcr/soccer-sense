@@ -11,6 +11,8 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
+from .country_aliases import resolve_country
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -212,7 +214,9 @@ def validate_and_standardize_players(df: pd.DataFrame) -> tuple[pd.DataFrame, li
             else:
                 standardized[internal_key] = 0.0
 
-    # Ensure clean team names
+    # Resolve country name aliases so that different official names
+    # (e.g. "Korea Republic" vs "South Korea") map to the same canonical key.
+    standardized["nationality"] = standardized["nationality"].apply(resolve_country)
     standardized["team"] = standardized["nationality"]
 
     # Infer position if not explicitly present
@@ -467,9 +471,9 @@ def detect_and_parse_players(html_text: str) -> pd.DataFrame:
                     elif "mf" in raw_pos_lower or "midfielder" in raw_pos_lower:
                         pos = "MF"
                         
-                    team = current_team
+                    team = resolve_country(current_team)
                     if team_col and pd.notna(row[team_col]):
-                        team = str(row[team_col]).strip()
+                        team = resolve_country(str(row[team_col]).strip())
                         
                     # Standardize stats
                     goals = pd.to_numeric(row[goals_col], errors="coerce") if goals_col else 0

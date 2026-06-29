@@ -1116,6 +1116,13 @@
                                 <th onclick="sortProfilesTable('team')">Team ↕️</th>
                                 <th onclick="sortProfilesTable('elo')">Elo Rating ↕️</th>
                                 <th onclick="sortProfilesTable('elo_rank')">Elo Rank ↕️</th>
+                                <th onclick="sortProfilesTable('fifa_rank')">FIFA Rank ↕️</th>
+                                <th onclick="sortProfilesTable('attack_rating')">Attack ↕️</th>
+                                <th onclick="sortProfilesTable('defense_rating')">Defense ↕️</th>
+                                <th onclick="sortProfilesTable('goals_avg')">Goals Avg ↕️</th>
+                                <th onclick="sortProfilesTable('xg_avg')">xG Avg ↕️</th>
+                                <th onclick="sortProfilesTable('clean_sheet_rate')">Clean Sheet % ↕️</th>
+                                <th onclick="sortProfilesTable('form_pts')">Form Pts ↕️</th>
                             </tr>
                         </thead>
                         <tbody id="teamProfilesBody">
@@ -1364,7 +1371,7 @@
             tbody.innerHTML = "";
             
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 2rem;">No matching team profiles found.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-muted); padding: 2rem;">No matching team profiles found.</td></tr>`;
                 return;
             }
             
@@ -1372,10 +1379,27 @@
                 const tr = document.createElement("tr");
                 const eloVal = (p.elo !== undefined && p.elo !== null && !isNaN(p.elo)) ? Number(p.elo).toFixed(1) : "--";
                 const rankVal = (p.elo_rank !== undefined && p.elo_rank !== null && !isNaN(p.elo_rank)) ? Number(p.elo_rank).toFixed(0) : "--";
+                const fifaRankVal = (p.fifa_rank !== undefined && p.fifa_rank !== null && !isNaN(p.fifa_rank)) ? Number(p.fifa_rank).toFixed(0) : "--";
+                const attackVal = (p.attack_rating !== undefined && p.attack_rating !== null && !isNaN(p.attack_rating)) ? Number(p.attack_rating).toFixed(1) : "--";
+                const defenseVal = (p.defense_rating !== undefined && p.defense_rating !== null && !isNaN(p.defense_rating)) ? Number(p.defense_rating).toFixed(1) : "--";
+                const goalsVal = (p.goals_avg !== undefined && p.goals_avg !== null && !isNaN(p.goals_avg)) ? Number(p.goals_avg).toFixed(2) : "--";
+                const xgVal = (p.xg_avg !== undefined && p.xg_avg !== null && !isNaN(p.xg_avg)) ? Number(p.xg_avg).toFixed(2) : "--";
+                const csVal = (p.clean_sheet_rate !== undefined && p.clean_sheet_rate !== null && !isNaN(p.clean_sheet_rate)) 
+                    ? (Number(p.clean_sheet_rate) > 1.0 ? Number(p.clean_sheet_rate).toFixed(1) : (Number(p.clean_sheet_rate) * 100).toFixed(1)) + "%" 
+                    : "--";
+                const formVal = (p.form_pts !== undefined && p.form_pts !== null && !isNaN(p.form_pts)) ? Number(p.form_pts).toFixed(1) : "--";
+
                 tr.innerHTML = `
-                    <td style="font-weight: 600;">${p.team}</td>
+                    <td style="font-weight: 600; color: var(--accent-secondary);">${p.team}</td>
                     <td>${eloVal}</td>
                     <td>${rankVal}</td>
+                    <td>${fifaRankVal}</td>
+                    <td>${attackVal}</td>
+                    <td>${defenseVal}</td>
+                    <td>${goalsVal}</td>
+                    <td>${xgVal}</td>
+                    <td>${csVal}</td>
+                    <td>${formVal}</td>
                 `;
                 tbody.appendChild(tr);
             });

@@ -39,7 +39,7 @@ def test_player_validation_full():
     assert len(missing) == 0
     assert len(standardized) == 2
     assert "team" in standardized.columns
-    assert list(standardized["team"]) == ["Türkiye", "Türkiye"]
+    assert list(standardized["team"]) == ["Turkey", "Turkey"]
     assert list(standardized["position"]) == ["FW", "FW"]
 
 def test_player_validation_missing_cols():
@@ -76,4 +76,4 @@ def test_read_only_fallback(monkeypatch):
     writable_path = get_writable_path(original_path)
     
     assert "/var/task" not in str(writable_path.as_posix())
-    assert "soccer_sense" in str(writable_path.as_posix())
+    assert "soccersense" in str(writable_path.as_posix())

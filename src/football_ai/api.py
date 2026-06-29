@@ -54,7 +54,8 @@ def predict_match(payload: MatchInput):
 @app.get("/teams")
 def get_teams() -> list[str]:
     try:
-        return sorted(list(predictor.artifact.get("team_profiles", {}).keys()))
+        teams = sorted(list(predictor.artifact.get("team_profiles", {}).keys()))
+        return [t for t in teams if not any(p in t.lower() for p in ["group", "winner", "runner", "loser", "playoff", "to be decided", "tbd", "qualification", "qualifier"])]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -80,35 +81,289 @@ def load_uploaded_file(upload_file: UploadFile) -> pd.DataFrame:
 
 
 def load_uploaded_files(upload_files: list[UploadFile] | None) -> pd.DataFrame | None:
-    """Read multiple uploaded files and concatenate them into a single DataFrame."""
-    if not upload_files:
+    """Read multiple uploaded files and combine them into a single DataFrame.
+
+    Each file is processed **independently** to prevent field corruption from
+    column-wise merge collisions on shared fields (e.g. home_goals, date).
+    After individual processing the results are combined with row-wise
+    concatenation followed by deduplication on (date, home_team, away_team).
+
+    File categories:
+
+    1. **Match-level files** — contain a match key (date + home_team +
+       away_team).  Each is individually cleaned; all are then row-wise
+       concatenated and deduplicated.
+
+    2. **Team-stats files** — have a team column but no match key
+       (e.g. attack_rating, form, xg_avg).  Pivoted onto the combined
+       match frame as home_<stat> / away_<stat> columns.
+    """
+    if not upload_files or not isinstance(upload_files, list):
         return None
-        
+
     import pandas as pd
-    dfs = []
-    
+
+    # Canonical match-key columns (checked after clean_column_name normalisation)
+    MATCH_KEY_CANDIDATES = [
+        ("date", "home_team", "away_team"),
+        ("date", "home_team_name", "away_team_name"),
+        ("date_gmt", "home_team", "away_team"),
+        ("date_gmt", "home_team_name", "away_team_name"),
+        ("match_date", "home_team", "away_team"),
+    ]
+
+    # Team-stats column names that will be pivoted as home_* / away_* on the match frame.
+    # We exclude identity/key columns like 'team', 'elo_rating' (already in match ELO cols).
+    TEAM_STAT_PIVOT_COLS = [
+        "attack_rating", "defense_rating",
+        "goals_avg", "conceded_avg",
+        "xg_avg", "xga_avg",
+        "win_rate_last10", "form_points_last5", "form_points_last10",
+        "clean_sheet_rate", "first_goal_rate",
+        "fifa_rank", "fifa_points",
+    ]
+
+    def _clean_cols(df: pd.DataFrame) -> pd.DataFrame:
+        df = df.copy()
+        df.columns = [clean_column_name(c) for c in df.columns]
+        return df
+
+    def _find_key(df: pd.DataFrame):
+        """Return the first tuple of columns that all exist in df, or None."""
+        for key in MATCH_KEY_CANDIDATES:
+            if all(k in df.columns for k in key):
+                return list(key)
+        return None
+
+    def _is_team_stats_file(df: pd.DataFrame) -> bool:
+        """True when the file has a team column but no match-level key."""
+        has_team_col = any(c in df.columns for c in ("team", "team_name", "club", "club_name"))
+        has_match_key = _find_key(df) is not None
+        return has_team_col and not has_match_key
+
+    def _pivot_team_stats_onto_matches(
+        result: pd.DataFrame, team_stats: pd.DataFrame
+    ) -> pd.DataFrame:
+        """Join team-level stats onto the match frame as home_* / away_* columns.
+
+        Uses resolve_country() so that variant country names in the team-stats
+        file still match the canonical names used in the match frame.
+        """
+        from .country_aliases import resolve_country as _rc
+        team_col = next(
+            (c for c in ("team", "team_name", "club", "club_name") if c in team_stats.columns),
+            None,
+        )
+        if team_col is None:
+            return result
+
+        # Dynamic pivoting: get all columns except the team identifier
+        stat_cols = [c for c in team_stats.columns if c != team_col]
+        if not stat_cols:
+            return result
+
+        # Build lookup: canonical-lower -> stat dict
+        lookup: dict[str, dict[str, Any]] = {}
+        for _, row in team_stats.iterrows():
+            raw_name = str(row.get(team_col, "")).strip()
+            if not raw_name:
+                continue
+            canonical_key = _rc(raw_name).lower()
+            
+            row_dict = {}
+            for col in stat_cols:
+                val = row[col]
+                try:
+                    if pd.notna(val):
+                        row_dict[col] = float(val)
+                except (ValueError, TypeError):
+                    row_dict[col] = val
+            lookup[canonical_key] = row_dict
+
+        if not lookup:
+            return result
+
+        home_team_col = next(
+            (c for c in ("home_team", "home_team_name") if c in result.columns), None
+        )
+        away_team_col = next(
+            (c for c in ("away_team", "away_team_name") if c in result.columns), None
+        )
+        if home_team_col is None or away_team_col is None:
+            return result
+
+        result = result.copy()
+        for stat_col in stat_cols:
+            home_out = f"home_{stat_col}"
+            away_out = f"away_{stat_col}"
+
+            def _lookup(t: str, _sc=stat_col) -> Any:
+                val = lookup.get(_rc(str(t).strip()).lower(), {}).get(_sc)
+                return val if val is not None else float("nan")
+
+            if home_out not in result.columns:
+                result[home_out] = result[home_team_col].apply(_lookup)
+            else:
+                mask = result[home_out].isna()
+                if mask.any():
+                    result.loc[mask, home_out] = result.loc[mask, home_team_col].apply(_lookup)
+
+            if away_out not in result.columns:
+                result[away_out] = result[away_team_col].apply(_lookup)
+            else:
+                mask = result[away_out].isna()
+                if mask.any():
+                    result.loc[mask, away_out] = result.loc[mask, away_team_col].apply(_lookup)
+
+        return result
+
+    match_dfs: list[pd.DataFrame] = []
+    team_stat_dfs: list[pd.DataFrame] = []
+
     import tempfile
-    debug_log_path = Path(tempfile.gettempdir()) / "soccer_sense" / "debug_upload.log"
+    from .country_aliases import resolve_country as _rc
+    debug_log_path = Path(tempfile.gettempdir()) / "soccersense" / "debug_upload.log"
     debug_log_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(debug_log_path, "a", encoding="utf-8") as f:
-        f.write("\n--- Individual Files Columns ---\n")
-        
+    with open(debug_log_path, "a", encoding="utf-8") as log_f:
+        log_f.write("\n--- Individual Files (independent processing) ---\n")
+
         for uf in upload_files:
             if not uf.filename:
                 continue
             try:
                 uf.file.seek(0)
                 df = load_uploaded_file(uf)
-                if df is not None and not df.empty:
-                    dfs.append(df)
-                    f.write(f"File: {uf.filename} | Shape: {df.shape} | Columns: {list(df.columns)}\n")
+                if df is None or df.empty:
+                    continue
+                df = _clean_cols(df)
+                if _is_team_stats_file(df):
+                    team_stat_dfs.append(df)
+                    log_f.write(
+                        f"File: {uf.filename} | Type: TEAM-STATS | Shape: {df.shape} | Columns: {list(df.columns)}\n"
+                    )
+                else:
+                    match_dfs.append(df)
+                    log_f.write(
+                        f"File: {uf.filename} | Type: MATCH-LEVEL | Shape: {df.shape} | Columns: {list(df.columns)}\n"
+                    )
             except Exception as e:
-                f.write(f"Error reading file {uf.filename}: {e}\n")
+                log_f.write(f"Error reading file {uf.filename}: {e}\n")
                 print(f"Error loading uploaded file {uf.filename}: {e}")
                 raise ValueError(f"Failed to parse file {uf.filename}: {str(e)}")
-            
+
+    if not match_dfs and not team_stat_dfs:
+        return None
+
+    # ------------------------------------------------------------------ #
+    # Step 1: Standardise column names and key columns of each dataframe #
+    # ------------------------------------------------------------------ #
+    processed_match_dfs = []
+    for df in match_dfs:
+        df = df.copy()
+        df.columns = [clean_column_name(c) for c in df.columns]
+
+        # Rename key columns to standard names if aliases are present
+        rename_map = {}
+        date_c = next((c for c in ("date", "date_gmt", "match_date", "kickoff") if c in df.columns), None)
+        home_c = next((c for c in ("home_team", "home_team_name", "home_club_name") if c in df.columns), None)
+        away_c = next((c for c in ("away_team", "away_team_name", "away_club_name") if c in df.columns), None)
+        goals_h_c = next((c for c in ("home_goals", "home_team_goal_count", "home_score", "fthg") if c in df.columns), None)
+        goals_a_c = next((c for c in ("away_goals", "away_team_goal_count", "away_score", "ftag") if c in df.columns), None)
+
+        if date_c: rename_map[date_c] = "date"
+        if home_c: rename_map[home_c] = "home_team"
+        if away_c: rename_map[away_c] = "away_team"
+        if goals_h_c: rename_map[goals_h_c] = "home_goals"
+        if goals_a_c: rename_map[goals_a_c] = "away_goals"
+
+        if rename_map:
+            df = df.rename(columns=rename_map)
+
+        if "date" in df.columns:
+            try:
+                # Standardise date to YYYY-MM-DD
+                df["date"] = pd.to_datetime(df["date"], errors="coerce").dt.strftime("%Y-%m-%d")
+            except Exception:
+                pass
+
+        if "home_team" in df.columns and "away_team" in df.columns:
+            df["home_team"] = df["home_team"].apply(lambda t: _rc(str(t).strip()))
+            df["away_team"] = df["away_team"].apply(lambda t: _rc(str(t).strip()))
+
+        processed_match_dfs.append(df)
+
+    if not processed_match_dfs:
+        # Only team-stats files uploaded — load existing/default matches to pivot onto
+        project_root = Path(__file__).resolve().parents[2]
+        matches_out = DATA_DIR / "sample_matches.csv"
+        config_path = project_root / "pipeline_config.json"
+        if config_path.exists():
+            try:
+                with open(config_path, "r") as f:
+                    config = json.load(f)
+                    if "matches" in config and "output" in config["matches"]:
+                        matches_out = DATA_DIR / Path(config["matches"]["output"]).name
+            except Exception:
+                pass
+        
+        base_path = matches_out if matches_out.exists() else (project_root / "data" / "sample_matches.csv")
+        if base_path.exists():
+            try:
+                result = pd.read_csv(base_path, encoding="utf-8")
+                # Clean columns so key checks and renames work
+                result.columns = [clean_column_name(c) for c in result.columns]
+            except Exception as e:
+                print(f"Error loading base matches: {e}")
+                return None
+        else:
+            return None
+    else:
+        if len(processed_match_dfs) == 1:
+            result = processed_match_dfs[0].copy()
+        else:
+            result = pd.concat(processed_match_dfs, ignore_index=True)
+
+    # ------------------------------------------------------------------ #
+    # Step 1b: Merge duplicate matches to preserve detailed columns      #
+    # ------------------------------------------------------------------ #
+    if "date" in result.columns and "home_team" in result.columns and "away_team" in result.columns:
+        # Sort so rows with the most filled columns (non-nulls) come first
+        non_null_counts = result.notna().sum(axis=1)
+        result_sorted = result.iloc[non_null_counts.sort_values(ascending=False).index]
+        
+        # groupby().first() ignores NaN/None by default, merging columns from duplicate rows!
+        result = result_sorted.groupby(["date", "home_team", "away_team"], as_index=False, dropna=False).first()
+
+    # ------------------------------------------------------------------ #
+    # Step 2: Pivot team-stats files onto match rows (home_* / away_*)   #
+    # ------------------------------------------------------------------ #
+    for ts_df in team_stat_dfs:
+        result = _pivot_team_stats_onto_matches(result, ts_df)
+
+    return result
+
+
+def load_uploaded_player_files(upload_files: list[UploadFile] | None) -> pd.DataFrame | None:
+    """Read multiple uploaded player files and combine them row-wise."""
+    if not upload_files or not isinstance(upload_files, list):
+        return None
+    import pandas as pd
+    dfs = []
+    for uf in upload_files:
+        if not uf.filename:
+            continue
+        try:
+            uf.file.seek(0)
+            df = load_uploaded_file(uf)
+            if df is not None and not df.empty:
+                dfs.append(df)
+        except Exception as e:
+            print(f"Error loading player file {uf.filename}: {e}")
+            raise ValueError(f"Failed to parse player file {uf.filename}: {str(e)}")
     if not dfs:
         return None
+    if len(dfs) == 1:
+        return dfs[0].copy()
     return pd.concat(dfs, ignore_index=True)
 
 
@@ -142,7 +397,7 @@ def train_from_upload(
         
         # Load and combine uploaded files
         raw_matches = load_uploaded_files(matches_files)
-        raw_players = load_uploaded_files(players_files)
+        raw_players = load_uploaded_player_files(players_files)
         
         matches_df = None
         players_df = None
@@ -150,10 +405,10 @@ def train_from_upload(
         # Write debug log of uploaded files and columns
         try:
             import tempfile
-            debug_log_path = Path(tempfile.gettempdir()) / "soccer_sense" / "debug_upload.log"
+            debug_log_path = Path(tempfile.gettempdir()) / "soccersense" / "debug_upload.log"
             debug_log_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(debug_log_path, "w", encoding="utf-8") as f:
-                f.write("=== Upload Debug ===\n")
+            with open(debug_log_path, "a", encoding="utf-8") as f:
+                f.write("\n=== Upload Debug ===\n")
                 if matches_files:
                     f.write(f"Uploaded matches files: {[uf.filename for uf in matches_files]}\n")
                 if players_files:
@@ -167,18 +422,38 @@ def train_from_upload(
             print(f"Failed to write debug upload log: {ex}")
         
         if raw_matches is not None and not raw_matches.empty:
+            # Column names are already cleaned by load_uploaded_files.
+            # Re-applying clean_column_name is idempotent but we leave it
+            # here as a safety net in case load_uploaded_files receives a
+            # single-file path that bypassed the merge logic.
             raw_matches.columns = [clean_column_name(c) for c in raw_matches.columns]
-            
-            # Check matches missing fields
-            for col in ["home_team", "away_team", "home_goals", "away_goals"]:
-                if col not in raw_matches.columns:
-                    warnings.append(f"Matches file: Critical column '{col}' was missing and initialized to defaults.")
+
+            # Check if any required fields (or their aliases) are missing
+            has_home = any(c in raw_matches.columns for c in ("home_team", "home_team_name", "home_club_name"))
+            has_away = any(c in raw_matches.columns for c in ("away_team", "away_team_name", "away_club_name"))
+            has_home_goals = any(c in raw_matches.columns for c in ("home_goals", "home_team_goal_count", "home_score", "fthg"))
+            has_away_goals = any(c in raw_matches.columns for c in ("away_goals", "away_team_goal_count", "away_score", "ftag"))
+
+            # Only warn and initialize to default if the field is completely missing (no alias exists either)
+            if not has_home:
+                raw_matches["home_team"] = "Unknown Home Team"
+                warnings.append("Matches file: Critical column 'home_team' was missing and initialized to defaults.")
+            if not has_away:
+                raw_matches["away_team"] = "Unknown Away Team"
+                warnings.append("Matches file: Critical column 'away_team' was missing and initialized to defaults.")
+            if not has_home_goals:
+                raw_matches["home_goals"] = 0
+                warnings.append("Matches file: Critical column 'home_goals' was missing and initialized to defaults.")
+            if not has_away_goals:
+                raw_matches["away_goals"] = 0
+                warnings.append("Matches file: Critical column 'away_goals' was missing and initialized to defaults.")
 
             # enrich_match_data() preserves ELO columns if present (or aliased) in the upload;
             # otherwise it computes them automatically from match history — this is normal
             # expected behaviour for standard match data formats and requires no user action.
             matches_df = enrich_match_data(raw_matches)
 
+        missing_cols: list[str] = []
         if raw_players is not None and not raw_players.empty:
             players_df, missing_cols = validate_and_standardize_players(raw_players)
             if missing_cols:
@@ -333,7 +608,7 @@ def reset_system() -> dict[str, str]:
         
         # Reset custom files
         for p, name in [(matches_out, "sample_matches.csv"), (players_out, "sample_players.csv")]:
-            is_tmp = tmp_dir in p.parents or "soccer_sense" in str(p)
+            is_tmp = tmp_dir in p.parents or "soccersense" in str(p)
             if is_tmp:
                 if p.exists() and p.is_file():
                     try:
@@ -349,7 +624,7 @@ def reset_system() -> dict[str, str]:
                     shutil.copy2(backup_file, p)
                     
         # Delete custom model from tmp if present
-        is_model_tmp = tmp_dir in MODEL_PATH.parents or "soccer_sense" in str(MODEL_PATH)
+        is_model_tmp = tmp_dir in MODEL_PATH.parents or "soccersense" in str(MODEL_PATH)
         if is_model_tmp:
             if MODEL_PATH.exists() and MODEL_PATH.is_file():
                 try:
@@ -358,7 +633,7 @@ def reset_system() -> dict[str, str]:
                     import logging
                     logging.warning(f"Could not delete {MODEL_PATH}: {e}")
                     
-            versioned_path = MODEL_PATH.parent / "soccer_sense_v1.0.0.pkl"
+            versioned_path = MODEL_PATH.parent / "soccersense_v1.pkl"
             if versioned_path.exists():
                 try:
                     versioned_path.unlink()
@@ -430,8 +705,21 @@ def update_version(payload: UpdateVersionInput):
         # Save updated model to MODEL_PATH
         save_model_artifact(predictor, MODEL_PATH)
         
-        # Save versioned copy
-        versioned_path = MODEL_PATH.parent / f"soccer_sense_v{payload.version}.pkl"
+        # Save versioned copy using get_version_suffix()
+        def get_version_suffix(version_str: str) -> str:
+            version_str = str(version_str).strip().lower()
+            for prefix in ("version_", "version", "v"):
+                if version_str.startswith(prefix):
+                    version_str = version_str[len(prefix):]
+            if "." in version_str:
+                version_str = version_str.split(".")[0]
+            version_str = "".join(c for c in version_str if c.isdigit())
+            if not version_str:
+                version_str = "1"
+            return f"v{version_str}"
+
+        v_suffix = get_version_suffix(payload.version)
+        versioned_path = MODEL_PATH.parent / f"soccersense_{v_suffix}.pkl"
         save_model_artifact(predictor, versioned_path)
         
         # Re-initialize predictor
@@ -504,22 +792,35 @@ def download_production_model():
     project_root = Path(__file__).resolve().parents[2]
     prod_model = MODEL_PATH
     if not prod_model.exists():
-        prod_model = project_root / "models" / "soccer_sense.pkl"
+        prod_model = project_root / "models" / "soccersense.pkl"
     if prod_model.exists():
-        return FileResponse(path=prod_model, filename="soccer_sense.pkl", media_type="application/octet-stream")
+        return FileResponse(path=prod_model, filename="soccersense.pkl", media_type="application/octet-stream")
     raise HTTPException(status_code=404, detail="Production model file not found.")
 
 
 @app.get("/download/production_model_versioned")
 def download_production_model_versioned():
     try:
+        def get_version_suffix(version_str: str) -> str:
+            version_str = str(version_str).strip().lower()
+            for prefix in ("version_", "version", "v"):
+                if version_str.startswith(prefix):
+                    version_str = version_str[len(prefix):]
+            if "." in version_str:
+                version_str = version_str.split(".")[0]
+            version_str = "".join(c for c in version_str if c.isdigit())
+            if not version_str:
+                version_str = "1"
+            return f"v{version_str}"
+
         version = predictor.artifact.get("version", "1.0.0")
+        v_suffix = get_version_suffix(version)
         project_root = Path(__file__).resolve().parents[2]
-        prod_model_v = MODEL_PATH.parent / f"soccer_sense_v{version}.pkl"
+        prod_model_v = MODEL_PATH.parent / f"soccersense_{v_suffix}.pkl"
         if not prod_model_v.exists():
-            prod_model_v = project_root / "models" / f"soccer_sense_v{version}.pkl"
+            prod_model_v = project_root / "models" / f"soccersense_{v_suffix}.pkl"
         if prod_model_v.exists():
-            return FileResponse(path=prod_model_v, filename=f"soccer_sense_v{version}.pkl", media_type="application/octet-stream")
+            return FileResponse(path=prod_model_v, filename=f"soccersense_{v_suffix}.pkl", media_type="application/octet-stream")
     except Exception:
         pass
     raise HTTPException(status_code=404, detail="Versioned production model file not found.")

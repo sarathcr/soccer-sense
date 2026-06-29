@@ -30,7 +30,7 @@ def get_writable_path(path: Path | str) -> Path:
         import tempfile
         tmp_dir = Path(tempfile.gettempdir())
         subfolder = parent.name if parent.name in ["data", "models"] else ""
-        fallback_dir = tmp_dir / "soccer_sense" / subfolder
+        fallback_dir = tmp_dir / "soccersense" / subfolder
         fallback_dir.mkdir(parents=True, exist_ok=True)
         return fallback_dir / path.name
 
@@ -38,7 +38,7 @@ READ_ONLY_DATA_DIR = PROJECT_ROOT / "data"
 READ_ONLY_MODEL_DIR = PROJECT_ROOT / "models"
 
 DATA_DIR = get_writable_path(PROJECT_ROOT / "data" / "dummy").parent
-MODEL_PATH = get_writable_path(PROJECT_ROOT / "models" / "soccer_sense.pkl")
+MODEL_PATH = get_writable_path(PROJECT_ROOT / "models" / "soccersense.pkl")
 
 
 def create_pipeline(estimator) -> Pipeline:
@@ -231,6 +231,84 @@ def make_pure_python_pipeline(pipeline) -> PurePythonPipeline:
         raise TypeError(f"Unsupported model type: {type(model)}")
 
 
+# ---------------------------------------------------------------------------
+# Probability calibration
+# ---------------------------------------------------------------------------
+
+class CalibrationLayer:
+    """Fits per-class isotonic regressors on held-out Poisson-derived probabilities.
+
+    This corrects systematic over/under-confidence without changing which
+    outcome is predicted — only the stated probability changes.
+    Classes follow RESULT_LABELS order: [away_win, draw, home_win].
+    """
+
+    def __init__(self):
+        from sklearn.isotonic import IsotonicRegression
+        self.calibrators = [
+            IsotonicRegression(out_of_bounds="clip"),
+            IsotonicRegression(out_of_bounds="clip"),
+            IsotonicRegression(out_of_bounds="clip"),
+        ]
+        self.classes = RESULT_LABELS
+
+    def fit(self, raw_probs: np.ndarray, y_true) -> "CalibrationLayer":
+        """Fit on (n,3) raw Poisson-derived probs vs string outcome labels."""
+        y_arr = np.array(y_true)
+        for i, cls in enumerate(self.classes):
+            y_binary = (y_arr == cls).astype(float)
+            self.calibrators[i].fit(raw_probs[:, i], y_binary)
+        return self
+
+    def transform(self, raw_probs: np.ndarray) -> np.ndarray:
+        """Return calibrated probabilities normalised to sum to 1 per row."""
+        raw_probs = np.array(raw_probs, dtype=float)
+        result = np.zeros_like(raw_probs)
+        for i, cal in enumerate(self.calibrators):
+            result[:, i] = cal.predict(raw_probs[:, i])
+        row_sums = result.sum(axis=1, keepdims=True)
+        return result / np.maximum(row_sums, 1e-9)
+
+
+class PurePythonCalibrationLayer:
+    """Serialisable calibration layer storing isotonic breakpoints as plain lists.
+
+    Uses np.interp on stored x/y breakpoints — no sklearn dependency at inference.
+    """
+
+    def __init__(self, params: dict):
+        # params = {"classes": [...], "calibrators": [{"x": [...], "y": [...]}, ...]}
+        self.params = params
+
+    def transform(self, raw_probs) -> np.ndarray:
+        """Apply stored isotonic mapping and normalise probabilities."""
+        arr = np.array(raw_probs, dtype=float)
+        result = np.zeros_like(arr)
+        for i, cal in enumerate(self.params["calibrators"]):
+            x = np.array(cal["x"])
+            y = np.array(cal["y"])
+            result[:, i] = np.interp(arr[:, i], x, y)
+        row_sums = result.sum(axis=1, keepdims=True)
+        return result / np.maximum(row_sums, 1e-9)
+
+
+def make_pure_python_calibration_layer(layer: CalibrationLayer) -> PurePythonCalibrationLayer:
+    """Serialise a fitted CalibrationLayer to plain-Python dicts."""
+    calibrators = []
+    for cal in layer.calibrators:
+        if hasattr(cal, "X_thresholds_"):
+            x = cal.X_thresholds_.tolist()
+            y = cal.y_thresholds_.tolist()
+        else:
+            x = [0.0, 1.0]
+            y = [0.0, 1.0]
+        calibrators.append({"x": x, "y": y})
+    return PurePythonCalibrationLayer({
+        "classes": RESULT_LABELS,
+        "calibrators": calibrators,
+    })
+
+
 class PredictorWrapper:
     def __init__(self, artifact):
         self.artifact = artifact
@@ -238,9 +316,13 @@ class PredictorWrapper:
         self.player_profiles = artifact.get("player_profiles", [])
         self.home_goals_model = artifact.get("home_goals_model")
         self.away_goals_model = artifact.get("away_goals_model")
+        self.calibration_layer = artifact.get("calibration_layer")
 
     def __getitem__(self, key):
         return self.artifact[key]
+
+    def __setitem__(self, key, value):
+        self.artifact[key] = value
 
     def get(self, key, default=None):
         return self.artifact.get(key, default)
@@ -257,7 +339,7 @@ class PredictorWrapper:
     def items(self):
         return self.artifact.items()
 
-    def predict(self, home_team, away_team=None) -> dict:
+    def predict(self, home_team, away_team=None) -> dict:  # noqa: C901
         import numpy as np
         import pandas as pd
         import scipy.stats as stats
@@ -304,39 +386,11 @@ class PredictorWrapper:
         else:
             away = self.team_profiles[a_team]
 
-        frame = pd.DataFrame([{
-            "home_elo": get_val(home, "elo"),
-            "away_elo": get_val(away, "elo"),
-            "home_elo_rank": get_val(home, "elo_rank"),
-            "away_elo_rank": get_val(away, "elo_rank"),
-            "home_gk_save_ratio": get_val(home, "gk_save_ratio", 0.70),
-            "away_gk_save_ratio": get_val(away, "gk_save_ratio", 0.70),
-            "home_gk_prevented_per_90": get_val(home, "gk_prevented_per_90", 0.0),
-            "away_gk_prevented_per_90": get_val(away, "gk_prevented_per_90", 0.0),
-        }])
-        frame["elo_diff"] = frame["home_elo"] - frame["away_elo"]
-        frame["rank_diff"] = frame["away_elo_rank"] - frame["home_elo_rank"]
-
-        feature_cols = [
-            "home_elo", "away_elo", "home_elo_rank", "away_elo_rank", "elo_diff", "rank_diff",
-            "home_gk_save_ratio", "away_gk_save_ratio", "home_gk_prevented_per_90", "away_gk_prevented_per_90"
-        ]
-        features = frame[feature_cols]
-
-        # Neutral venue expected goals averaging (FIFA World Cup)
-        frame_swapped = pd.DataFrame([{
-            "home_elo": get_val(away, "elo"),
-            "away_elo": get_val(home, "elo"),
-            "home_elo_rank": get_val(away, "elo_rank"),
-            "away_elo_rank": get_val(home, "elo_rank"),
-            "home_gk_save_ratio": get_val(away, "gk_save_ratio", 0.70),
-            "away_gk_save_ratio": get_val(home, "gk_save_ratio", 0.70),
-            "home_gk_prevented_per_90": get_val(away, "gk_prevented_per_90", 0.0),
-            "away_gk_prevented_per_90": get_val(home, "gk_prevented_per_90", 0.0),
-        }])
-        frame_swapped["elo_diff"] = frame_swapped["home_elo"] - frame_swapped["away_elo"]
-        frame_swapped["rank_diff"] = frame_swapped["away_elo_rank"] - frame_swapped["home_elo_rank"]
-        features_swapped = frame_swapped[feature_cols]
+        from .features import build_inference_features as _bif
+        # Build full extended-feature vectors (35 features incl. form, attack/defense ratings)
+        features         = _bif(h_team, a_team, self.team_profiles)
+        # Neutral-venue adjustment: average goals with teams swapped as home/away
+        features_swapped = _bif(a_team, h_team, self.team_profiles)
 
         goals_a_as_home = float(self.home_goals_model.predict(features)[0])
         goals_a_as_away = float(self.away_goals_model.predict(features_swapped)[0])
@@ -381,6 +435,13 @@ class PredictorWrapper:
         draw_prob = float(np.trace(joint))
         home_win_prob = float(np.sum(np.tril(joint, -1)))
         away_win_prob = float(np.sum(np.triu(joint, 1)))
+
+        # Apply isotonic calibration if the layer was fitted during training.
+        # Order matches RESULT_LABELS = ["away_win", "draw", "home_win"].
+        if self.calibration_layer is not None:
+            raw = np.array([[away_win_prob, draw_prob, home_win_prob]])
+            cal = self.calibration_layer.transform(raw)[0]
+            away_win_prob, draw_prob, home_win_prob = float(cal[0]), float(cal[1]), float(cal[2])
 
         probabilities = {
             "home_win": int(round(home_win_prob * 100)),
@@ -578,6 +639,12 @@ def save_model_artifact(artifact_obj, dest_path):
             return "None"
         return f"PurePythonPipeline({repr(model.params)})"
 
+    def get_calibration_repr(key):
+        layer = art.get(key)
+        if layer is None:
+            return "None"
+        return f"PurePythonCalibrationLayer({repr(layer.params)})"
+
     team_profiles_repr = repr(art.get("team_profiles", {}))
     player_profiles_repr = repr(art.get("player_profiles", []))
     metrics_repr = repr(art.get("metrics", {}))
@@ -591,6 +658,7 @@ def save_model_artifact(artifact_obj, dest_path):
     first_goal_model_repr = get_model_repr("first_goal_model")
     home_clean_sheet_model_repr = get_model_repr("home_clean_sheet_model")
     away_clean_sheet_model_repr = get_model_repr("away_clean_sheet_model")
+    calibration_layer_repr = get_calibration_repr("calibration_layer")
 
     payload_code = f"""exec('''
 import os
@@ -705,6 +773,21 @@ class PurePythonPipeline:
         return np.array(self.params.get("classes", []))
 
 
+class PurePythonCalibrationLayer:
+    def __init__(self, params):
+        self.params = params
+
+    def transform(self, raw_probs):
+        arr = np.array(raw_probs, dtype=float)
+        result = np.zeros_like(arr)
+        for i, cal in enumerate(self.params["calibrators"]):
+            x = np.array(cal["x"])
+            y = np.array(cal["y"])
+            result[:, i] = np.interp(arr[:, i], x, y)
+        row_sums = result.sum(axis=1, keepdims=True)
+        return result / np.maximum(row_sums, 1e-9)
+
+
 class PredictorWrapper:
     def __init__(self, artifact):
         self.artifact = artifact
@@ -712,9 +795,13 @@ class PredictorWrapper:
         self.player_profiles = artifact.get("player_profiles", [])
         self.home_goals_model = artifact.get("home_goals_model")
         self.away_goals_model = artifact.get("away_goals_model")
+        self.calibration_layer = artifact.get("calibration_layer")
 
     def __getitem__(self, key):
         return self.artifact[key]
+
+    def __setitem__(self, key, value):
+        self.artifact[key] = value
 
     def get(self, key, default=None):
         return self.artifact.get(key, default)
@@ -887,6 +974,11 @@ class PredictorWrapper:
         draw_prob = float(np.trace(joint))
         home_win_prob = float(np.sum(np.tril(joint, -1)))
         away_win_prob = float(np.sum(np.triu(joint, 1)))
+
+        if self.calibration_layer is not None:
+            raw = np.array([[away_win_prob, draw_prob, home_win_prob]])
+            cal_p = self.calibration_layer.transform(raw)[0]
+            away_win_prob, draw_prob, home_win_prob = float(cal_p[0]), float(cal_p[1]), float(cal_p[2])
 
         probabilities = {{
             "home_win": int(round(home_win_prob * 100)),
@@ -1099,6 +1191,7 @@ artifact = {{
     "first_goal_model": {first_goal_model_repr},
     "home_clean_sheet_model": {home_clean_sheet_model_repr},
     "away_clean_sheet_model": {away_clean_sheet_model_repr},
+    "calibration_layer": {calibration_layer_repr},
 }}
 global loaded_model
 loaded_model = PredictorWrapper(artifact)
@@ -1382,18 +1475,31 @@ def train_model(
             val_probs = np.array(val_probs)
             val_accuracy = float(accuracy_score(result_valid, val_preds))
             val_log_loss = float(log_loss(result_valid, val_probs, labels=RESULT_LABELS))
-        except Exception:
+
+            # Fit isotonic probability calibration on the held-out validation probs
+            calibration_layer = CalibrationLayer()
+            calibration_layer.fit(val_probs, result_valid)
+            cal_probs = calibration_layer.transform(val_probs)
+            calibrated_log_loss = float(log_loss(result_valid, cal_probs, labels=RESULT_LABELS))
+            print(f"Probability calibration fitted: log_loss {val_log_loss:.4f} -> {calibrated_log_loss:.4f}")
+        except Exception as e:
+            print(f"Warning: calibration fitting failed: {e}")
             val_log_loss = 1.098  # Fallback to random uniform log loss
             val_accuracy = 0.333
+            calibration_layer = None
+            calibrated_log_loss = val_log_loss
             
         val_home_mae = float(mean_absolute_error(y_home_goals.loc[valid_index], dev_home_goals_model.predict(x_valid)))
         val_away_mae = float(mean_absolute_error(y_away_goals.loc[valid_index], dev_away_goals_model.predict(x_valid)))
     else:
         val_log_loss, val_accuracy, val_home_mae, val_away_mae = 0.0, 1.0, 0.0, 0.0
+        calibration_layer = None
+        calibrated_log_loss = 0.0
 
     metrics = {
         "result_accuracy": val_accuracy,
         "result_log_loss": val_log_loss,
+        "calibrated_log_loss": calibrated_log_loss,
         "home_goals_mae": val_home_mae,
         "away_goals_mae": val_away_mae,
     }
@@ -1411,6 +1517,7 @@ def train_model(
         "player_profiles": players.to_dict(orient="records"),
         "feature_columns": FEATURE_COLUMNS,
         "metrics": metrics,
+        "calibration_layer": calibration_layer,
     }
 
     # --- 2. Production Mode (100% Data Fit for maximum accuracy) ---
@@ -1480,6 +1587,7 @@ def train_model(
         "player_profiles": players.to_dict(orient="records"),
         "feature_columns": FEATURE_COLUMNS,
         "metrics": metrics,
+        "calibration_layer": calibration_layer,  # Same layer from dev split (valid held-out data)
     }
 
     # Convert scikit-learn models in artifacts to PurePythonPipeline
@@ -1490,11 +1598,29 @@ def train_model(
         ]:
             if key in artifact and artifact[key] is not None:
                 artifact[key] = make_pure_python_pipeline(artifact[key])
+        # Serialise calibration layer to plain-Python breakpoints
+        if artifact.get("calibration_layer") is not None:
+            artifact["calibration_layer"] = make_pure_python_calibration_layer(
+                artifact["calibration_layer"]
+            )
+
+    def get_version_suffix(version_str: str) -> str:
+        version_str = str(version_str).strip().lower()
+        for prefix in ("version_", "version", "v"):
+            if version_str.startswith(prefix):
+                version_str = version_str[len(prefix):]
+        if "." in version_str:
+            version_str = version_str.split(".")[0]
+        version_str = "".join(c for c in version_str if c.isdigit())
+        if not version_str:
+            version_str = "1"
+        return f"v{version_str}"
 
     # Define paths
     dev_model_path = model_path.parent / "dev_model.pkl"
     version = prod_artifact.get("version", "1.0.0")
-    versioned_path = model_path.parent / f"soccer_sense_v{version}.pkl"
+    v_suffix = get_version_suffix(version)
+    versioned_path = model_path.parent / f"soccersense_{v_suffix}.pkl"
 
     dev_wrapper = PredictorWrapper(dev_artifact)
     prod_wrapper = PredictorWrapper(prod_artifact)
@@ -1514,8 +1640,8 @@ def train_model(
         try:
             import shutil
             shutil.copy2(dev_model_path, parent_models / "dev_model.pkl")
-            shutil.copy2(model_path, parent_models / "soccer_sense.pkl")
-            shutil.copy2(versioned_path, parent_models / f"soccer_sense_v{version}.pkl")
+            shutil.copy2(model_path, parent_models / "soccersense.pkl")
+            shutil.copy2(versioned_path, parent_models / f"soccersense_{v_suffix}.pkl")
             print("Successfully synchronized models to parent models directory.")
         except Exception as e:
             print(f"Warning: Could not sync models to parent directory: {e}")

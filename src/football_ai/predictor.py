@@ -12,7 +12,7 @@ from .features import build_inference_features, normalize_team_name
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_MODEL_PATH = PROJECT_ROOT / "models" / "soccer_sense.pkl"
+DEFAULT_MODEL_PATH = PROJECT_ROOT / "models" / "soccersense.pkl"
 
 
 def normalize_player_name(name: str) -> str:
@@ -31,7 +31,7 @@ class FootballPredictor:
         # /tmp by a training run in the current session (Vercel or local).
         if Path(model_path) == DEFAULT_MODEL_PATH:
             import tempfile
-            tmp_model_path = Path(tempfile.gettempdir()) / "soccer_sense" / "models" / "soccer_sense.pkl"
+            tmp_model_path = Path(tempfile.gettempdir()) / "soccersense" / "models" / "soccersense.pkl"
             if tmp_model_path.exists():
                 self.model_path = tmp_model_path
 
