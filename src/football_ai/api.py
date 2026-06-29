@@ -373,7 +373,6 @@ def train_from_upload(
     players_files: list[UploadFile] = File(None)
 ):
     global predictor
-
     import pandas as pd
     try:
         # Determine output paths from config, or default
