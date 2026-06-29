@@ -1,0 +1,3 @@
+# Mark binary files so git never applies CRLF conversion to them
+*.pkl binary
+*.pkl -text -diff
