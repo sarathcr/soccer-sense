@@ -26,12 +26,12 @@ def normalize_player_name(name: str) -> str:
 class FootballPredictor:
     def __init__(self, model_path: Path | str = DEFAULT_MODEL_PATH):
         self.model_path = Path(model_path)
-        
-        # Check if we should use the tmp/soccer_sense model if DEFAULT_MODEL_PATH was requested
+
+        # If the default path is requested, prefer a model that was written to
+        # /tmp by a training run in the current session (Vercel or local).
         if Path(model_path) == DEFAULT_MODEL_PATH:
             import tempfile
-            tmp_dir = Path(tempfile.gettempdir())
-            tmp_model_path = tmp_dir / "soccer_sense" / "models" / "soccer_sense.pkl"
+            tmp_model_path = Path(tempfile.gettempdir()) / "soccer_sense" / "models" / "soccer_sense.pkl"
             if tmp_model_path.exists():
                 self.model_path = tmp_model_path
 

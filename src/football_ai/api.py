@@ -29,7 +29,7 @@ class UpdateVersionInput(BaseModel):
 
 
 @app.get("/health")
-def health() -> dict[str, str]:
+def health() -> dict:
     return {"status": "ok"}
 
 
@@ -206,7 +206,7 @@ def train_from_upload(
         
         # Reload predictor with the new production model
         predictor = FootballPredictor(MODEL_PATH)
-        
+
         required_labels = ["name", "nationality", "apps", "mins", "goals", "xg", "Goals vs xG", "shots", "sot", "conv %", "xG per Shot", "goals x90", "xg x90", "Goals vs xG x90", "shots x90", "sot x90"]
         player_validation_status = {col: (col not in missing_cols) for col in required_labels} if raw_players is not None else None
 
@@ -219,7 +219,7 @@ def train_from_upload(
             "teams": sorted(list(artifact["team_profiles"].keys())),
             "warnings": warnings,
             "player_validation_status": player_validation_status,
-            "version": artifact.get("version", "1.0.0")
+            "version": artifact.get("version", "1.0.0"),
         }
     except Exception as e:
         import traceback
@@ -277,7 +277,7 @@ def train_from_url(payload: CrawlTrainInput):
         
         # Reload predictor with the new production model
         predictor = FootballPredictor(MODEL_PATH)
-        
+
         # Check warnings
         warnings = []
         if matches_df is not None and not matches_df.empty:
@@ -311,7 +311,7 @@ def train_from_url(payload: CrawlTrainInput):
             "teams": sorted(list(artifact["team_profiles"].keys())),
             "warnings": warnings,
             "player_validation_status": player_validation_status,
-            "version": artifact.get("version", "1.0.0")
+            "version": artifact.get("version", "1.0.0"),
         }
     except Exception as e:
         import traceback
@@ -523,6 +523,3 @@ def download_production_model_versioned():
     except Exception:
         pass
     raise HTTPException(status_code=404, detail="Versioned production model file not found.")
-
-# Trigger reload: model updated with goalkeeper names
-
