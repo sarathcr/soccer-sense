@@ -46,7 +46,7 @@ def read_root():
 def predict_match(payload: MatchInput):
     try:
         data = predictor.predict(payload.home_team, payload.away_team)
-        return Response(content=json.dumps(data), media_type="application/json")
+        return Response(content=json.dumps(data, ensure_ascii=False), media_type="application/json")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 

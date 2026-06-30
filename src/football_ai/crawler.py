@@ -42,6 +42,15 @@ def clean_column_name(col: str) -> str:
     return col
 
 
+_PLAYER_NAME_TRANSLATE_TABLE = str.maketrans({
+    "Ø": "O", "ø": "o",
+    "Æ": "AE", "æ": "ae",
+    "ß": "ss",
+    "Ð": "D", "ð": "d",
+    "Þ": "TH", "þ": "th"
+})
+
+
 def normalize_player_name(name: str) -> str:
     """Normalize names by stripping accents and converting to NFKD Unicode."""
     if not isinstance(name, str):
@@ -49,6 +58,7 @@ def normalize_player_name(name: str) -> str:
             return ""
         name = str(name)
     import unicodedata
+    name = name.translate(_PLAYER_NAME_TRANSLATE_TABLE)
     nfkd_form = unicodedata.normalize('NFKD', name)
     return "".join([c for c in nfkd_form if not unicodedata.combining(c)]).strip()
 
@@ -200,7 +210,9 @@ def validate_and_standardize_players(df: pd.DataFrame) -> tuple[pd.DataFrame, li
                     break
 
         if matched_col is not None:
-            if internal_key in ["name", "nationality"]:
+            if internal_key == "name":
+                standardized[internal_key] = df[matched_col].astype(str).str.strip().apply(normalize_player_name)
+            elif internal_key == "nationality":
                 standardized[internal_key] = df[matched_col].astype(str).str.strip()
             else:
                 # Numeric fields: replace percent signs, commas, etc.

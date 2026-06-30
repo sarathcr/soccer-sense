@@ -38,3 +38,18 @@ def test_prediction_matches_required_json_contract():
     assert isinstance(output["goal_insights"]["both_teams_to_score"]["prediction"], bool)
     assert output["player_prediction"]["home_team"]["goal"]
     assert output["player_prediction"]["away_team"]["goal"]
+
+
+def test_prediction_fifa_country_names():
+    if not MODEL_PATH.exists():
+        train_model()
+
+    # Korea Republic -> South Korea, IR Iran -> Iran
+    result = FootballPredictor().predict("Korea Republic", "IR Iran")
+    output = result["output"]
+
+    # If resolved correctly, it should NOT return "Data Unavailable" for the prediction
+    assert output["match_prediction"]["win_probabilities"]["home_team"]["probability"] != "Data Unavailable"
+    assert output["match_prediction"]["win_probabilities"]["away_team"]["probability"] != "Data Unavailable"
+    assert output["match_prediction"]["win_probabilities"]["home_team"]["team"] == "South Korea"
+    assert output["match_prediction"]["win_probabilities"]["away_team"]["team"] == "Iran"
