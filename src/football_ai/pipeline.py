@@ -209,7 +209,7 @@ def main() -> None:
         print(f"\nRunning prediction for {args.predict[0]} vs {args.predict[1]}...")
         try:
             result = predict(args.predict[0], args.predict[1])
-            print(json.dumps(result, indent=2))
+            print(json.dumps(result, indent=2, ensure_ascii=False))
         except Exception as e:
             print(f"Error during prediction: {e}")
 

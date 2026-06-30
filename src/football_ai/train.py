@@ -356,7 +356,8 @@ class PredictorWrapper:
                 if pd.isna(team):
                     return ""
                 team = str(team)
-            return " ".join(team.strip().split()).title()
+            from .country_aliases import resolve_country
+            return resolve_country(" ".join(team.strip().split()))
 
         h_team = normalize_name(home_team)
         a_team = normalize_name(away_team)
@@ -493,6 +494,8 @@ class PredictorWrapper:
             if not isinstance(name_val, str):
                 return ""
             import unicodedata
+            table = str.maketrans({"Ø": "O", "ø": "o", "Æ": "AE", "æ": "ae", "ß": "ss", "Ð": "D", "ð": "d", "Þ": "TH", "þ": "th"})
+            name_val = name_val.translate(table)
             nfkd_form = unicodedata.normalize('NFKD', name_val)
             return "".join([c for c in nfkd_form if not unicodedata.combining(c)]).strip()
 
@@ -685,8 +688,7 @@ def save_model_artifact(artifact_obj, dest_path):
     away_clean_sheet_model_repr = get_model_repr("away_clean_sheet_model")
     calibration_layer_repr = get_calibration_repr("calibration_layer")
 
-    payload_code = f"""exec('''
-import os
+    inner_payload = f"""import os
 os.environ['PYDEVD_DISABLE_FILE_VALIDATION'] = '1'
 import numpy as np
 import pandas as pd
@@ -856,7 +858,7 @@ class PredictorWrapper:
                 if pd.isna(team):
                     return ""
                 team = str(team)
-            return " ".join(team.strip().split()).title()
+            return resolve_country(" ".join(team.strip().split()))
 
         h_team = normalize_name(home_team)
         a_team = normalize_name(away_team)
@@ -1103,6 +1105,8 @@ class PredictorWrapper:
             if not isinstance(name_val, str):
                 return ""
             import unicodedata
+            table = str.maketrans({{"Ø": "O", "ø": "o", "Æ": "AE", "æ": "ae", "ß": "ss", "Ð": "D", "ð": "d", "Þ": "TH", "þ": "th"}})
+            name_val = name_val.translate(table)
             nfkd_form = unicodedata.normalize('NFKD', name_val)
             return "".join([c for c in nfkd_form if not unicodedata.combining(c)]).strip()
 
@@ -1283,7 +1287,14 @@ artifact = {{
 }}
 global loaded_model
 loaded_model = PredictorWrapper(artifact)
-''') or loaded_model"""
+"""
+
+    aliases_path = Path(__file__).parent / "country_aliases.py"
+    with open(aliases_path, "r", encoding="utf-8") as f:
+        aliases_code = f.read()
+
+    full_payload = aliases_code + "\n\n" + inner_payload
+    payload_code = "exec(" + repr(full_payload) + ") or loaded_model"
 
     # Serialize the payload to pickle protocol 0 format
     dump = pickle.dumps(payload_code, protocol=0)

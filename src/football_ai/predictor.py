@@ -15,10 +15,20 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MODEL_PATH = PROJECT_ROOT / "models" / "soccersense.pkl"
 
 
+_PLAYER_NAME_TRANSLATE_TABLE = str.maketrans({
+    "Ø": "O", "ø": "o",
+    "Æ": "AE", "æ": "ae",
+    "ß": "ss",
+    "Ð": "D", "ð": "d",
+    "Þ": "TH", "þ": "th"
+})
+
+
 def normalize_player_name(name: str) -> str:
     if not isinstance(name, str):
         return ""
     import unicodedata
+    name = name.translate(_PLAYER_NAME_TRANSLATE_TABLE)
     nfkd_form = unicodedata.normalize('NFKD', name)
     return "".join([c for c in nfkd_form if not unicodedata.combining(c)]).strip()
 
@@ -516,7 +526,7 @@ def main() -> None:
         print("Usage: python3 -m src.football_ai.predictor Argentina Brazil")
         raise SystemExit(2)
     result = predict(sys.argv[1], sys.argv[2])
-    print(json.dumps(result, indent=2))
+    print(json.dumps(result, indent=2, ensure_ascii=False))
 
 
 if __name__ == "__main__":

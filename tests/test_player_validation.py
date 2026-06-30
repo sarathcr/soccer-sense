@@ -12,6 +12,8 @@ def test_unicode_normalization():
     assert normalize_player_name("Kerem Aktürkoglu") == "Kerem Akturkoglu"
     assert normalize_player_name("Deniz Gül") == "Deniz Gul"
     assert normalize_player_name("Álex Zendejas") == "Alex Zendejas"
+    assert normalize_player_name("Martin Ødegaard") == "Martin Odegaard"
+    assert normalize_player_name("Leo Østigard") == "Leo Ostigard"
 
 def test_position_inference():
     # GK by name

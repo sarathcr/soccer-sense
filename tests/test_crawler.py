@@ -85,7 +85,7 @@ def test_detect_and_parse_players():
     assert df.loc[0, "team"] == "Argentina"
     assert df.loc[0, "name"] == "Lionel Messi"
     assert df.loc[0, "position"] == "FW"
-    assert df.loc[1, "name"] == "Emiliano Martínez"
+    assert df.loc[1, "name"] == "Emiliano Martinez"
     assert df.loc[1, "position"] == "GK"
 
 
