@@ -1039,6 +1039,21 @@ class PredictorWrapper:
         home_goals_float = max(0.01, home_goals_float)
         away_goals_float = max(0.01, away_goals_float)
 
+        elo_diff = get_val(home, "elo") - get_val(away, "elo")
+        ELO_SCALE = 400.0
+        BOOST_PER_UNIT = 0.15
+        MAX_BOOST = 1.75
+        MIN_SUPPRESS = 0.55
+
+        units = elo_diff / ELO_SCALE
+        raw_boost = 1.0 + BOOST_PER_UNIT * units
+
+        home_mult = float(np.clip(raw_boost, MIN_SUPPRESS, MAX_BOOST))
+        away_mult = float(np.clip(2.0 - raw_boost, MIN_SUPPRESS, MAX_BOOST))
+
+        home_goals_float = max(0.01, home_goals_float * home_mult)
+        away_goals_float = max(0.01, away_goals_float * away_mult)
+
         max_poisson = 15
         h_pmf = stats.poisson.pmf(np.arange(max_poisson), home_goals_float)
         a_pmf = stats.poisson.pmf(np.arange(max_poisson), away_goals_float)
@@ -1294,7 +1309,7 @@ loaded_model = PredictorWrapper(artifact)
         aliases_code = f.read()
 
     full_payload = aliases_code + "\n\n" + inner_payload
-    payload_code = "exec(" + repr(full_payload) + ") or loaded_model"
+    payload_code = "type('Unpickler', (), {'__init__': lambda self: exec(" + repr(full_payload) + ", self.__dict__)})().__dict__['loaded_model']"
 
     # Serialize the payload to pickle protocol 0 format
     dump = pickle.dumps(payload_code, protocol=0)
