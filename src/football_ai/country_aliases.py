@@ -87,6 +87,8 @@ COUNTRY_ALIASES: dict[str, str] = {
     "bosnia": "Bosnia and Herzegovina",
     "bih": "Bosnia and Herzegovina",
     "bih men's national football team": "Bosnia and Herzegovina",
+    "bosnia-herzegovina": "Bosnia and Herzegovina",
+    "bosnia herzegovina": "Bosnia and Herzegovina",
 
     # ---- Brazil ----
     "brazil": "Brazil",
