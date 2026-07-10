@@ -437,12 +437,26 @@ class PredictorWrapper:
         home_win_prob = float(np.sum(np.tril(joint, -1)))
         away_win_prob = float(np.sum(np.triu(joint, 1)))
 
+        # Symmetrize probability calculations to remove home/away bias for neutral prediction
+        joint_s = np.outer(a_pmf, h_pmf)
+        draw_prob_s = float(np.trace(joint_s))
+        home_win_prob_s = float(np.sum(np.tril(joint_s, -1)))
+        away_win_prob_s = float(np.sum(np.triu(joint_s, 1)))
+
         # Apply isotonic calibration if the layer was fitted during training.
         # Order matches RESULT_LABELS = ["away_win", "draw", "home_win"].
         if self.calibration_layer is not None:
             raw = np.array([[away_win_prob, draw_prob, home_win_prob]])
             cal = self.calibration_layer.transform(raw)[0]
-            away_win_prob, draw_prob, home_win_prob = float(cal[0]), float(cal[1]), float(cal[2])
+            cal_away, cal_draw, cal_home = float(cal[0]), float(cal[1]), float(cal[2])
+
+            raw_s = np.array([[away_win_prob_s, draw_prob_s, home_win_prob_s]])
+            cal_s = self.calibration_layer.transform(raw_s)[0]
+            cal_away_s, cal_draw_s, cal_home_s = float(cal_s[0]), float(cal_s[1]), float(cal_s[2])
+
+            home_win_prob = (cal_home + cal_away_s) / 2.0
+            away_win_prob = (cal_away + cal_home_s) / 2.0
+            draw_prob = (cal_draw + cal_draw_s) / 2.0
 
         probabilities = {
             "home_win": int(round(home_win_prob * 100)),
@@ -1065,10 +1079,24 @@ class PredictorWrapper:
         home_win_prob = float(np.sum(np.tril(joint, -1)))
         away_win_prob = float(np.sum(np.triu(joint, 1)))
 
+        # Symmetrize probability calculations to remove home/away bias for neutral prediction
+        joint_s = np.outer(a_pmf, h_pmf)
+        draw_prob_s = float(np.trace(joint_s))
+        home_win_prob_s = float(np.sum(np.tril(joint_s, -1)))
+        away_win_prob_s = float(np.sum(np.triu(joint_s, 1)))
+
         if self.calibration_layer is not None:
             raw = np.array([[away_win_prob, draw_prob, home_win_prob]])
             cal_p = self.calibration_layer.transform(raw)[0]
-            away_win_prob, draw_prob, home_win_prob = float(cal_p[0]), float(cal_p[1]), float(cal_p[2])
+            cal_away, cal_draw, cal_home = float(cal_p[0]), float(cal_p[1]), float(cal_p[2])
+
+            raw_s = np.array([[away_win_prob_s, draw_prob_s, home_win_prob_s]])
+            cal_s = self.calibration_layer.transform(raw_s)[0]
+            cal_away_s, cal_draw_s, cal_home_s = float(cal_s[0]), float(cal_s[1]), float(cal_s[2])
+
+            home_win_prob = (cal_home + cal_away_s) / 2.0
+            away_win_prob = (cal_away + cal_home_s) / 2.0
+            draw_prob = (cal_draw + cal_draw_s) / 2.0
 
         probabilities = {{
             "home_win": int(round(home_win_prob * 100)),
